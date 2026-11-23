@@ -18,10 +18,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: "17" }
-      - uses: android-actions/setup-android@v3
 
       # Clé de signature stable (secrets du dépôt). Sans ces secrets, l'APK est signé
       # avec une clé de debug jetable : chaque mise à jour imposerait une désinstallation.
@@ -44,6 +43,8 @@ jobs:
           WM_KEY_PASSWORD: ${{ secrets.WM_KEY_PASSWORD }}
           NAME: ${{ inputs.release || github.ref_name }}
         run: |
+          # SDK Android préinstallé sur les runners ubuntu (ANDROID_HOME).
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
           case "$NAME" in *[!A-Za-z0-9._/-]*) echo "Nom invalide"; exit 1;; esac
           ./gradlew --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk "WM_Opener-${NAME//\//-}.apk"

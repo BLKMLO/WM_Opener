@@ -5,3 +5,6 @@ local.properties
 .idea/
 .kotlin/
 *.apk
+*.jks
+*.keystore
+*.b64

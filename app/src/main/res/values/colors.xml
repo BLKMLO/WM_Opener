@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette reprise du CSS de wiki-masters.com (thème sombre). -->
+    <color name="bg">#0C0D0C</color>
+    <color name="surface">#131615</color>
+    <color name="surface_hi">#1B1F1D</color>
+    <color name="line">#2E3431</color>
+    <color name="fg">#F2F4F3</color>
+    <color name="muted">#8A958F</color>
+    <color name="faint">#59625D</color>
+    <color name="accent">#34D399</color>
+    <color name="accent_ink">#06261A</color>
+    <color name="danger">#F07167</color>
+
+    <color name="r_c">#B8F2D5</color>
+    <color name="r_pc">#B1CFF2</color>
+    <color name="r_r">#C6A7F2</color>
+    <color name="r_sr">#ED6FA3</color>
+    <color name="r_ur">#FA9931</color>
+    <color name="r_l">#FFE144</color>
+</resources>

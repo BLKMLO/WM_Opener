@@ -1,8 +1,11 @@
 package com.wmopener
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -10,17 +13,21 @@ import android.view.View
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Charge la page des paquets dans une WebView (invisible si lancée en arrière-plan)
- * et y exécute assets/opener.js. Doit être appelée sur le thread principal.
- */
+/** Pilote une WebView sur la page des paquets et y exécute assets/opener.js. */
 object AutoOpener {
+
+    /** Une seule ouverture à la fois (arrière-plan et manuel confondus). */
+    val busy = AtomicBoolean(false)
+
+    private const val TIMEOUT_MS = 3 * 60 * 1000L
 
     fun buildScript(context: Context, prefs: Prefs, mode: String): String {
         val cfg = JSONObject()
@@ -33,26 +40,77 @@ object AutoOpener {
         return js.replace("__WM_CFG__", cfg.toString())
     }
 
+    fun isSiteUrl(url: String?): Boolean =
+        url != null && Uri.parse(url).let { it.scheme == "https" && it.host in Prefs.SITE_HOSTS }
+
     @SuppressLint("SetJavaScriptEnabled")
     fun configure(webView: WebView) {
-        webView.settings.javaScriptEnabled = true
-        webView.settings.domStorageEnabled = true
-        webView.settings.mediaPlaybackRequiresUserGesture = true
+        with(webView.settings) {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = false
+            allowContentAccess = false
+            mediaPlaybackRequiresUserGesture = true
+            setSupportMultipleWindows(false)
+            javaScriptCanOpenWindowsAutomatically = false
+        }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
     }
 
-    /** Exécution en arrière-plan : WebView créée pour l'occasion puis détruite. */
-    suspend fun runHeadless(context: Context, mode: String = "open"): JSONObject {
+    /**
+     * Client qui garde la WebView sur le site : tout autre domaine s'ouvre dans le
+     * navigateur du téléphone (le pont JavaScript n'est jamais exposé à un site tiers).
+     */
+    open class SiteClient(private val ctx: Context, private val external: Boolean) : WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            val u = request.url
+            if (u.scheme == "https" && u.host in Prefs.NAV_HOSTS) return false
+            if (external && request.isForMainFrame && (u.scheme == "https" || u.scheme == "http" || u.scheme == "mailto")) {
+                try {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: ActivityNotFoundException) { }
+            }
+            return true
+        }
+    }
+
+    /**
+     * Pont JS → appli. Les messages ne sont acceptés que si la WebView est
+     * actuellement sur wiki-masters.com (vérifié sur le thread principal).
+     */
+    class Bridge(
+        private val webView: () -> WebView?,
+        private val onProgress: (JSONObject) -> Unit = {},
+        private val onReport: (JSONObject) -> Unit,
+    ) {
+        private val main = Handler(Looper.getMainLooper())
+
+        private fun dispatch(json: String, cb: (JSONObject) -> Unit) {
+            main.post {
+                if (!isSiteUrl(webView()?.url)) return@post
+                val obj = try { JSONObject(json) } catch (_: Exception) { return@post }
+                cb(obj)
+            }
+        }
+
+        @JavascriptInterface fun report(json: String) = dispatch(json, onReport)
+        @JavascriptInterface fun progress(json: String) = dispatch(json, onProgress)
+    }
+
+    /** Ouverture en arrière-plan. À appeler sur le thread principal. */
+    suspend fun runHeadless(context: Context, onProgress: (Int) -> Unit = {}): JSONObject {
         val prefs = Prefs(context)
-        val bridge = Bridge()
         val webView = WebView(context)
         configure(webView)
-        webView.addJavascriptInterface(bridge, "WMBridge")
+        val done = CompletableDeferred<JSONObject>()
+        webView.addJavascriptInterface(
+            Bridge({ webView }, { onProgress(it.optInt("opened")) }) { done.complete(it) }, "WMBridge"
+        )
 
         // Sans fenêtre, Chromium peut suspendre les animations (requestAnimationFrame).
-        // Si l'autorisation "superposition" est accordée, on attache la WebView à une
-        // fenêtre transparente et non tactile pour qu'elle soit rendue normalement.
+        // Avec l'autorisation de superposition, la WebView est attachée à une fenêtre
+        // transparente et non tactile : elle est rendue normalement, sans rien bloquer.
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         var attached = false
         if (Settings.canDrawOverlays(context)) {
@@ -62,69 +120,71 @@ object AutoOpener {
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                     PixelFormat.TRANSLUCENT
-                )
-                lp.alpha = 0.0f
+                ).apply { alpha = 0f }
                 wm.addView(webView, lp)
                 attached = true
             } catch (_: Exception) { }
         }
         if (!attached) {
-            val w = 1080; val h = 2340
             webView.measure(
-                View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY)
+                View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(2340, View.MeasureSpec.EXACTLY)
             )
-            webView.layout(0, 0, w, h)
+            webView.layout(0, 0, 1080, 2340)
         }
 
-        val script = buildScript(context, prefs, mode)
+        val script = buildScript(context, prefs, "open")
         var injected = false
-        webView.webViewClient = object : WebViewClient() {
+        webView.webViewClient = object : SiteClient(context, external = false) {
             override fun onPageFinished(view: WebView, url: String) {
-                if (!injected) {
-                    injected = true
-                    view.evaluateJavascript(script, null)
-                }
+                if (injected) return
+                if (!isSiteUrl(url)) return
+                injected = true
+                view.evaluateJavascript(script, null)
             }
         }
         webView.loadUrl(prefs.pullsUrl)
 
-        val result = withTimeoutOrNull(4 * 60 * 1000L) { bridge.result.await() }
+        val result = withTimeoutOrNull(TIMEOUT_MS) { done.await() }
             ?: JSONObject().put("ok", false).put("reason", "timeout")
 
         CookieManager.getInstance().flush()
-        if (attached) try { wm.removeView(webView) } catch (_: Exception) { }
+        if (attached) try { wm.removeViewImmediate(webView) } catch (_: Exception) { }
         webView.stopLoading()
+        webView.removeJavascriptInterface("WMBridge")
         webView.destroy()
-        return result.put("overlay", attached)
+        return result
     }
 
-    class Bridge(private val onReport: ((JSONObject) -> Unit)? = null) {
-        val result = CompletableDeferred<JSONObject>()
-        private val main = Handler(Looper.getMainLooper())
-
-        @JavascriptInterface
-        fun report(json: String) {
-            val obj = try { JSONObject(json) } catch (e: Exception) {
-                JSONObject().put("ok", false).put("reason", "bad_json")
-            }
-            result.complete(obj)
-            onReport?.let { cb -> main.post { cb(obj) } }
-        }
+    /** Enregistre le résultat (historique, journal, état) et renvoie un résumé lisible. */
+    fun record(context: Context, r: JSONObject, source: String): String {
+        val prefs = Prefs(context)
+        val summary = summarize(r)
+        prefs.addLog("[$source] $summary")
+        if (source == "diagnostic" || r.optString("mode") == "diagnose") return summary
+        prefs.lastRunAt = System.currentTimeMillis()
+        prefs.lastRunSummary = summary
+        if (r.optBoolean("ok")) prefs.sessionAlertSent = false
+        val n = r.optInt("opened")
+        if (n > 0) History.add(context, Entry(System.currentTimeMillis(), source, n, History.parseCards(r)))
+        return summary
     }
 
-    /** Résumé lisible d'un rapport, pour le journal et les notifications. */
     fun summarize(r: JSONObject): String = when {
-        !r.optBoolean("ok") && r.optString("reason") == "login" -> "Session expirée : reconnectez-vous dans l'appli."
-        !r.optBoolean("ok") -> "Échec (${r.optString("reason")}) ${r.optString("error")}".trim()
+        !r.optBoolean("ok") -> when (r.optString("reason")) {
+            "login" -> "Session expirée, reconnectez-vous."
+            "timeout" -> "La page n'a pas répondu à temps."
+            "bad_regex" -> "Expression de détection invalide : ${r.optString("error")}"
+            else -> "Échec : ${r.optString("error").ifEmpty { r.optString("reason") }}"
+        }
         r.optString("mode") == "diagnose" -> "Diagnostic : ${r.optJSONArray("buttons")?.length() ?: 0} bouton(s) visibles."
+        r.optInt("opened") == 0 -> "Rien à ouvrir."
         else -> {
-            val n = r.optInt("opened")
-            if (n == 0) "Aucun paquet disponible (aucun bouton d'ouverture trouvé)."
-            else "$n paquet(s) ouvert(s). Clics : ${r.optJSONArray("clicks")}"
+            val n = r.optInt("opened"); val c = r.optJSONArray("cards")?.length() ?: 0
+            "$n paquet${if (n > 1) "s" else ""} ouvert${if (n > 1) "s" else ""}" +
+                if (c > 0) ", $c carte${if (c > 1) "s" else ""} détectée${if (c > 1) "s" else ""}." else "."
         }
     }
 }

@@ -187,7 +187,10 @@ object AutoOpener {
         prefs.lastRunSummary = summary
         if (r.optBoolean("ok")) prefs.sessionAlertSent = false
         val n = r.optInt("opened")
-        if (n > 0) History.add(context, Entry(System.currentTimeMillis(), source, n, History.parseCards(r)))
+        if (n > 0) {
+            val cards = History.parseCards(r)
+            History.add(context, Entry(System.currentTimeMillis(), source, n, cards, if (cards.isEmpty()) summary else ""))
+        }
         return summary
     }
 
@@ -202,12 +205,18 @@ object AutoOpener {
         r.optInt("opened") == 0 && r.optInt("noEffect") > 0 ->
             "Clic sur « Ouvrir » sans effet." + if (!r.optBoolean("raf", true))
                 " Animations suspendues en arrière-plan." else " Voir le journal."
+        r.optInt("opened") == 0 && r.optString("blocked") == "verification" ->
+            "Arrêté par la vérification anti-robot du site."
         r.optInt("opened") == 0 -> "Rien à ouvrir."
         else -> {
             val n = r.optInt("opened"); val c = r.optJSONArray("cards")?.length() ?: 0
             "$n paquet${if (n > 1) "s" else ""} ouvert${if (n > 1) "s" else ""}" +
                 (if (c > 0) ", $c carte${if (c > 1) "s" else ""} détectée${if (c > 1) "s" else ""}" else "") +
-                if (r.optBoolean("partial")) " (passage interrompu : délai dépassé)." else "."
+                when {
+                    r.optString("blocked") == "verification" -> ". Arrêt : vérification anti-robot du site."
+                    r.optBoolean("partial") -> " (passage interrompu : délai dépassé)."
+                    else -> "."
+                }
         }
     }
 }

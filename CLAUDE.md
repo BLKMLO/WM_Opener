@@ -92,6 +92,13 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   Le changement de carte est détecté par la signature « Carte i/n » + nom de la carte au centre de l'écran. Maquette
   « carrousel » (5 slides dans le DOM, Continuer après 5 vues) : OK avec la flèche (div) et avec le glissement seul.
 
+- 2026-11-23 14:30 : le site affiche parfois « Vérification rapide — On vérifie que tu es bien humain » (Turnstile)
+  au moment d'ouvrir. **Ne pas contourner** (décision : contournement anti-bot exclu). 1.3.1 (versionCode 8) :
+  `passVerification()` attend jusqu'à 45 s sans interagir, sinon `blocked = "verification"` et arrêt. Les cartes sont
+  envoyées via `progress` dès qu'elles apparaissent (`collect`). `Entry.note` (champ JSON « o ») = résumé quand aucune
+  carte n'a été repérée. Un passage auto à 14:31 (version probablement 1.3.0) : 1 paquet, aucune carte ; cause inconnue,
+  journal demandé.
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

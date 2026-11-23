@@ -1,3 +1,11 @@
+## WM Opener 1.3.1
+
+- **Vérification anti-robot du site** (« Vérification rapide… On vérifie que tu es bien humain ») : l'appli la reconnaît et attend qu'elle se termine d'elle-même, jusqu'à 45 s, sans jamais interagir avec elle. Si elle reste affichée, le passage s'arrête et l'historique l'indique.
+- **Cartes dans l'historique** : chaque carte repérée est transmise aussitôt. Un passage interrompu (délai, vérification) garde donc les cartes déjà vues.
+- Quand aucune carte n'a été repérée, l'historique en donne la raison (résumé du passage).
+
+---
+
 ## WM Opener 1.3.0
 
 - **Défilement des cartes** : l'écran « Carte i / 5 » est un carrousel. Pour passer à la carte suivante, l'appli essaie dans l'ordre : la flèche ›, le bouton « Encore N cartes », un vrai glissement tactile envoyé par Android (comme un doigt), un glissement simulé, puis un toucher sur la carte. La première méthode qui fonctionne est retenue pour la suite.

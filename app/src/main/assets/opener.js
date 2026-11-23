@@ -114,6 +114,19 @@
     log("écran révélation, titres : " + JSON.stringify(headings()));
   };
 
+  // Contrôle anti-robot du site (« Vérification rapide… On vérifie que tu es bien humain »).
+  // On n'y touche pas : on attend qu'il se termine seul, sinon on arrête le passage.
+  let blocked = null;
+  const verifying = () => /vérification rapide|bien humain|verify (that )?you are human/i.test(pageText());
+  const passVerification = async () => {
+    if (!verifying()) return true;
+    log("vérification anti-robot du site affichée : attente (sans interaction)");
+    for (let t = 0; t < 45; t++) { await sleep(1000); if (!verifying()) { log(`vérification terminée après ${t + 1} s`); return true; } }
+    log("vérification toujours affichée après 45 s : arrêt du passage");
+    blocked = "verification";
+    return false;
+  };
+
   const onLogin = () => /^\/(login|signup|inscription)/.test(location.pathname);
   const listButtons = () => [...new Set(clickables().map(label).filter(Boolean))].slice(0, 80);
   const state = () => {
@@ -138,7 +151,13 @@
     log(`départ : ${state()}, animations ${raf ? "OK" : "suspendues"}`);
     const found = new Map();
     const baseline = new Set(cardsOnScreen().keys());
-    const collect = () => cardsOnScreen().forEach((v, k) => { if (!baseline.has(k)) found.set(k, v); });
+    let openedSoFar = 0;
+    // Chaque nouvelle carte est transmise aussitôt : rien n'est perdu si le passage est interrompu.
+    const collect = () => {
+      const before = found.size;
+      cardsOnScreen().forEach((v, k) => { if (!baseline.has(k)) found.set(k, v); });
+      if (found.size > before) progress({ opened: openedSoFar, cards: [...found.values()] });
+    };
 
     // ── Écran « Carte i / n » : un carrousel (flèches ‹ ›, 5 points, bouton « Encore N cartes »).
     // On avance en glissant la carte ; « Continuer » n'apparaît qu'une fois les 5 cartes vues.
@@ -230,6 +249,7 @@
     const finishReveal = async () => {
       let fails = 0;
       for (let step = 0; step < 40; step++) {
+        if (!(await passVerification())) return;
         logReveal();
         collect();
         const r0 = reveal();
@@ -275,17 +295,21 @@
       const a0 = available();
       if (a0 && a0.n === 0) { log("0 paquet disponible"); break; }
 
+      if (!(await passVerification())) break;
       clicks.push(label(b));
       log(`clic « ${label(b)} » (${state()})`);
       b.click();
 
-      // Confirmation : baisse du compteur ou écran de révélation, sous 12 s.
+      // Confirmation : baisse du compteur ou écran de révélation, sous 12 s
+      // (plus le temps d'une éventuelle vérification anti-robot).
       let confirmed = false;
       for (let w = 0; w < 24 && !confirmed; w++) {
         await sleep(500);
+        if (verifying() && !(await passVerification())) break;
         const a1 = available();
         confirmed = !!reveal() || (a0 && a1 && a1.n < a0.n);
       }
+      if (blocked) break;
       if (!confirmed) {
         noEffect++;
         log(`aucun effet visible après le clic (${state()})`);
@@ -293,7 +317,8 @@
         continue;
       }
       opened++;
-      progress({ opened });
+      openedSoFar = opened;
+      progress({ opened, cards: [...found.values()] });
       log(`paquet ouvert (${state()})`);
       await sleep(1200);
       await finishReveal();
@@ -301,11 +326,11 @@
       // Bilan partiel : conservé par l'appli si le passage est interrompu (délai dépassé).
       progress({ opened, cards: [...found.values()] });
       await sleep(1500);
-      if (onLogin()) break;
+      if (onLogin() || blocked) break;
     }
 
     report({
-      ok: true, opened, noEffect, raf, clicks, trace,
+      ok: true, opened, noEffect, raf, clicks, trace, blocked,
       cards: [...found.values()], available: available(), url: location.href, buttons: listButtons(),
     });
   } catch (e) {

@@ -491,7 +491,7 @@ class MainActivity : Activity() {
                 append("${e.opened} paquet${if (e.opened > 1) "s" else ""}")
                 append("  ${e.source}", ForegroundColorSpan(getColor(R.color.faint)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            v.findViewById<TextView>(R.id.cards).text = cardsText(e.cards)
+            v.findViewById<TextView>(R.id.cards).text = cardsText(e.cards, e.note)
             val best = e.cards.maxByOrNull { History.RARITY_ORDER.indexOf(it.rarity) }?.rarity
             v.findViewById<View>(R.id.edge).background = GradientDrawable().apply {
                 cornerRadius = dp(2).toFloat(); setColor(rarityColor[best] ?: getColor(R.color.line))
@@ -500,9 +500,10 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun cardsText(cards: List<Card>): CharSequence {
+    private fun cardsText(cards: List<Card>, note: String = ""): CharSequence {
         if (cards.isEmpty()) return SpannableStringBuilder().apply {
-            append("Cartes non repérées sur la page", ForegroundColorSpan(getColor(R.color.faint)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append("Cartes non repérées" + if (note.isNotBlank()) " · $note" else "",
+                ForegroundColorSpan(getColor(R.color.faint)), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         val sb = SpannableStringBuilder()
         cards.sortedByDescending { History.RARITY_ORDER.indexOf(it.rarity) }.forEachIndexed { i, c ->

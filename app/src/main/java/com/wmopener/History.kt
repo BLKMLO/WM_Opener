@@ -12,9 +12,11 @@ data class Entry(
     val source: String,       // "auto" ou "manuel"
     val opened: Int,
     val cards: List<Card>,
+    val note: String = "",    // ce qui s'est passé quand aucune carte n'a été repérée
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("t", time).put("s", source).put("n", opened)
+        .put("o", note)
         .put("c", JSONArray().apply { cards.forEach { put(JSONObject().put("r", it.rarity).put("n", it.name)) } })
 
     companion object {
@@ -22,7 +24,8 @@ data class Entry(
             o.getLong("t"), o.optString("s", "auto"), o.optInt("n"),
             (o.optJSONArray("c") ?: JSONArray()).let { a ->
                 (0 until a.length()).map { a.getJSONObject(it).let { c -> Card(c.optString("r"), c.optString("n")) } }
-            }
+            },
+            o.optString("o", ""),
         )
     }
 }

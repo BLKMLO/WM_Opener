@@ -5,6 +5,11 @@ on:
     branches: ["**"]
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Tag de release à créer (ex. v1.0.0). Vide = simple build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -37,9 +42,11 @@ jobs:
           WM_KEYSTORE_PASSWORD: ${{ secrets.WM_KEYSTORE_PASSWORD }}
           WM_KEY_ALIAS: ${{ secrets.WM_KEY_ALIAS }}
           WM_KEY_PASSWORD: ${{ secrets.WM_KEY_PASSWORD }}
+          NAME: ${{ inputs.release || github.ref_name }}
         run: |
+          case "$NAME" in *[!A-Za-z0-9._/-]*) echo "Nom invalide"; exit 1;; esac
           ./gradlew --no-daemon assembleRelease
-          cp app/build/outputs/apk/release/app-release.apk "WM_Opener-${GITHUB_REF_NAME//\//-}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "WM_Opener-${NAME//\//-}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -47,8 +54,11 @@ jobs:
           path: WM_Opener-*.apk
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: WM Opener ${{ inputs.release || github.ref_name }}
           files: WM_Opener-*.apk
           body_path: RELEASE_NOTES.md

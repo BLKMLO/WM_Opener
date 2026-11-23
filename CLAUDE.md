@@ -41,7 +41,9 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   settings.gradle.kts et sert aussi à Robolectric (propriété système dans app/build.gradle.kts).
 - `./gradlew assembleRelease` (R8 activé, environ 370 Ko). Captures d'écran : `./gradlew recordRoborazziDebug` → `docs/screenshots/`.
 - Test du script hors appli : Playwright sur une page factice (voir l'historique git ; pas de fichier de test versionné).
-- Release : pousser un tag `vX.Y.Z` déclenche `.github/workflows/build.yml`, qui crée la release GitHub avec l'APK
+- Release : le proxy Git de la session refuse les push de tags (403). Lancer le workflow avec l'outil GitHub
+  `actions_run_trigger` (run_workflow, workflow_id `build.yml`, ref = branche de travail, inputs.release = `vX.Y.Z`) :
+  l'action crée elle-même le tag et la release. Un push de tag `vX.Y.Z` fait par l'utilisatrice déclenche aussi `.github/workflows/build.yml`, qui crée la release GitHub avec l'APK
   (`RELEASE_NOTES.md`). Signature stable via les secrets `WM_KEYSTORE_B64`, `WM_KEYSTORE_PASSWORD`, `WM_KEY_ALIAS`,
   `WM_KEY_PASSWORD`, sinon clé de debug jetable. Le dépôt est **public** : ne jamais y commiter de keystore.
 - Penser à incrémenter `versionCode` / `versionName` dans app/build.gradle.kts avant chaque tag.

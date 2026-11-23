@@ -82,6 +82,16 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   Délai d'un passage en arrière-plan : 9 min (avant, 3 min). Un bilan partiel est envoyé après chaque paquet, et il est
   enregistré si le délai est dépassé (`partial`). Maquette : « Continuer » après 3 s, 2 paquets en 37 s, favoris jamais cliqué.
 
+- Capture du 2026-11-23 14:21 : l'écran « Carte i / 5 » est un **carrousel**. Sous la carte : flèche ‹, 5 points, flèche ›
+  (ronde), puis un bouton vert « Encore 4 cartes ». L'utilisatrice : l'appli « n'arrive pas à swiper », et ça repart quand
+  elle glisse elle-même. Ni la flèche › ni « Encore N cartes » n'apparaissaient dans les boutons cliquables du bilan
+  (balise non-bouton ou désactivés : inconnu).
+- 1.3.0 (versionCode 7) : `ADVANCE` dans opener.js = flèche › (svg lucide-chevron-right, quelle que soit la balise),
+  « Encore N cartes », `WMBridge.swipe` (vrais MotionEvent dispatchés à la WebView, coordonnées CSS × scale),
+  glissement JS (PointerEvent/TouchEvent, tactile puis souris), toucher. La méthode qui marche est mémorisée (`method`).
+  Le changement de carte est détecté par la signature « Carte i/n » + nom de la carte au centre de l'écran. Maquette
+  « carrousel » (5 slides dans le DOM, Continuer après 5 vues) : OK avec la flèche (div) et avec le glissement seul.
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

@@ -140,64 +140,124 @@
     const baseline = new Set(cardsOnScreen().keys());
     const collect = () => cardsOnScreen().forEach((v, k) => { if (!baseline.has(k)) found.set(k, v); });
 
-    // Carte affichée : bloc qui contient le badge de rareté et le titre.
-    const cardElement = () => {
-      for (const b of document.querySelectorAll('[style*="--color-rarity-"],[class*="rarity"]')) {
-        if (!visible(b)) continue;
-        let c = b.parentElement;
-        for (let k = 0; k < 6 && c && !c.querySelector("h1,h2,h3,h4"); k++) c = c.parentElement;
-        if (c) return c;
-      }
-      return null;
+    // ── Écran « Carte i / n » : un carrousel (flèches ‹ ›, 5 points, bouton « Encore N cartes »).
+    // On avance en glissant la carte ; « Continuer » n'apparaît qu'une fois les 5 cartes vues.
+    const inView = (el) => {
+      const r = el.getBoundingClientRect(), cx = r.left + r.width / 2;
+      return r.width > 0 && cx > 0 && cx < innerWidth;
     };
-    const tap = (el) => {
-      const r = el.getBoundingClientRect();
-      const o = { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
-      for (const t of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"])
-        el.dispatchEvent(t.startsWith("pointer") ? new PointerEvent(t, o) : new MouseEvent(t, o));
+    // Carte au centre de l'écran : bloc qui contient un titre et un badge de rareté.
+    const currentCard = () => {
+      let best = null, bestD = 1e9;
+      document.querySelectorAll("h1,h2,h3,h4").forEach((h) => {
+        if (!visible(h) || !inView(h)) return;
+        let c = h.parentElement;
+        for (let k = 0; k < 6 && c && !c.querySelector('[style*="--color-rarity-"],[class*="rarity"]'); k++) c = c.parentElement;
+        if (!c || !c.querySelector('[style*="--color-rarity-"],[class*="rarity"]')) return;
+        const r = c.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - innerWidth / 2);
+        if (d < bestD) { bestD = d; best = { el: c, name: h.textContent.replace(/\s+/g, " ").trim() }; }
+      });
+      return best;
+    };
+    const signature = () => { const r = reveal(), c = currentCard(); return (r ? r.i + "/" + r.n : "-") + "|" + (c ? c.name : ""); };
+    const changedFrom = async (sig, ms) => {
+      for (let t = 0; t < ms; t += 300) { await sleep(300); collect(); if (!reveal() || signature() !== sig) return true; }
+      return false;
     };
 
-    // Fait défiler l'écran « Carte i / n » jusqu'au bout. Sur le site, chaque carte doit être vue :
-    // le bouton « Continuer » n'apparaît qu'après l'animation de la carte (plusieurs secondes).
+    const fire = (el, x, y, type, ptr, buttons) => el.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: ptr, isPrimary: true,
+      clientX: x, clientY: y, screenX: x, screenY: y, button: 0, buttons }));
+    const tap = (el) => {
+      const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const o = { bubbles: true, cancelable: true, clientX: x, clientY: y };
+      fire(el, x, y, "pointerdown", "touch", 1); el.dispatchEvent(new MouseEvent("mousedown", o));
+      fire(el, x, y, "pointerup", "touch", 0); el.dispatchEvent(new MouseEvent("mouseup", o));
+      el.dispatchEvent(new MouseEvent("click", o));
+    };
+    // Glissement simulé en JavaScript (évènements pointer, puis touch si disponibles).
+    const jsSwipe = async (el, ptr) => {
+      const r = el.getBoundingClientRect(), y = r.top + r.height / 2;
+      const x0 = r.left + r.width * 0.85, x1 = r.left + r.width * 0.1;
+      const touch = (type, x) => {
+        try {
+          const t = new Touch({ identifier: 7, target: el, clientX: x, clientY: y, pageX: x, pageY: y });
+          const list = type === "touchend" ? [] : [t];
+          el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: list, targetTouches: list, changedTouches: [t] }));
+        } catch (e) {}
+      };
+      fire(el, x0, y, "pointerdown", ptr, 1); if (ptr === "touch") touch("touchstart", x0);
+      for (let k = 1; k <= 12; k++) {
+        const x = x0 + (x1 - x0) * k / 12;
+        fire(el, x, y, "pointermove", ptr, 1); if (ptr === "touch") touch("touchmove", x);
+        await sleep(16);
+      }
+      fire(el, x1, y, "pointerup", ptr, 0); if (ptr === "touch") touch("touchend", x1);
+    };
+
+    // Méthodes pour passer à la carte suivante, essayées dans l'ordre ; la première qui marche
+    // est retenue pour les cartes suivantes.
+    const ADVANCE = {
+      "flèche ›": async () => {
+        for (const svg of document.querySelectorAll("svg[class*='lucide-chevron-right'],svg[class*='lucide-arrow-right']")) {
+          if (!visible(svg) || !inView(svg)) continue;
+          const t = svg.closest('button,[role="button"],a') || svg.parentElement;
+          if (!t || t.disabled || t.getAttribute("aria-disabled") === "true") continue;
+          tap(t); return true;
+        }
+        return false;
+      },
+      "« Encore N cartes »": async () => {
+        const el = [...document.querySelectorAll("button,[role='button'],a,div,span")]
+          .find((e) => visible(e) && /^encore\s+\d+\s+cartes?$/i.test((e.innerText || "").trim()));
+        if (!el) return false;
+        const t = el.closest('button,[role="button"],a') || el;
+        if (t.disabled) return false;
+        tap(t); return true;
+      },
+      "glissement natif": async () => {
+        const c = currentCard(); if (!c || !bridge.swipe) return false;
+        const r = c.el.getBoundingClientRect(), y = r.top + r.height / 2;
+        try { bridge.swipe(r.left + r.width * 0.85, y, r.left + r.width * 0.1, y); } catch (e) { return false; }
+        await sleep(500); return true;
+      },
+      "glissement JS tactile": async () => { const c = currentCard(); if (!c) return false; await jsSwipe(c.el, "touch"); return true; },
+      "glissement JS souris": async () => { const c = currentCard(); if (!c) return false; await jsSwipe(c.el, "mouse"); return true; },
+      "toucher la carte": async () => { const c = currentCard(); if (!c) return false; tap(c.el); return true; },
+    };
+    let method = null;   // méthode retenue (conservée d'un paquet à l'autre)
+
     const finishReveal = async () => {
-      let stuck = 0, tapped = false;
+      let fails = 0;
       for (let step = 0; step < 40; step++) {
         logReveal();
         collect();
-        const before = reveal();
-        if (!before) return;
+        const r0 = reveal();
+        if (!r0) return;
 
+        // « Continuer » (ou autre bouton de suite) : apparaît quand toutes les cartes ont été vues.
         let f = null;
-        for (let w = 0; w < 30 && !f; w++) {         // jusqu'à 15 s
-          f = find(followRe);
-          if (!f) { await sleep(500); collect(); if (!reveal()) return; }
+        for (let w = 0; w < 6 && !f; w++) { f = find(followRe); if (!f) { await sleep(500); collect(); if (!reveal()) return; } }
+        const sig0 = signature();
+        if (f) {
+          log(`carte ${r0.i}/${r0.n} : clic « ${label(f)} »`);
+          f.click();
+          if (await changedFrom(sig0, 6000)) { fails = 0; continue; }
         }
-        if (!f) {
-          const card = cardElement();
-          if (card && !tapped) {                     // dernier recours : toucher la carte
-            tapped = true;
-            log(`carte ${before.i}/${before.n} : pas de bouton de suite, je touche la carte`);
-            tap(card);
-            await sleep(1500);
-            const a = reveal();
-            if (!a || a.i !== before.i) tapped = false;   // la carte a avancé : on pourra retoucher
-            continue;
-          }
-          log(`carte ${before.i}/${before.n} : aucun bouton de suite`);
-          return;
-        }
-        log(`carte ${before.i}/${before.n} : clic « ${label(f)} »`);
-        f.click();
 
-        let changed = false;
-        for (let w = 0; w < 12 && !changed; w++) {   // jusqu'à 6 s
-          await sleep(500);
-          collect();
-          const a = reveal();
-          changed = !a || a.i !== before.i || a.n !== before.n;
+        const names = Object.keys(ADVANCE);
+        const order = method ? [method, ...names.filter((m) => m !== method)] : names;
+        let ok = false;
+        for (const m of order) {
+          if (!(await ADVANCE[m]())) continue;
+          if (await changedFrom(sig0, 2500)) {
+            if (m !== method) log(`carte ${r0.i}/${r0.n} : avance par ${m}`);
+            method = m; ok = true; break;
+          }
         }
-        if (changed) { stuck = 0; tapped = false; }
-        else if (++stuck >= 3) { log(`carte ${before.i}/${before.n} : clics sans effet`); return; }
+        if (ok) { fails = 0; continue; }
+        if (++fails >= 3) { log(`carte ${r0.i}/${r0.n} : impossible d'avancer (${order.join(", ")} sans effet)`); return; }
+        await sleep(2000);   // laisse le temps à « Continuer » d'apparaître
       }
     };
 

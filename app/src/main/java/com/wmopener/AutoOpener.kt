@@ -7,6 +7,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -94,6 +97,34 @@ object AutoOpener {
 
         @JavascriptInterface fun report(json: String) = dispatch(json, onReport)
         @JavascriptInterface fun progress(json: String) = dispatch(json, onProgress)
+
+        /**
+         * Vrai glissement tactile, envoyé par Android à la WebView (évènements « de confiance »,
+         * comme un doigt). Coordonnées en pixels CSS de la page ; ramenées dans les limites de la vue.
+         */
+        @JavascriptInterface
+        fun swipe(x1: Float, y1: Float, x2: Float, y2: Float) {
+            main.post {
+                val wv = webView() ?: return@post
+                if (!isSiteUrl(wv.url)) return@post
+                @Suppress("DEPRECATION") val s = wv.scale
+                val w = wv.width.toFloat().coerceAtLeast(1f); val h = wv.height.toFloat().coerceAtLeast(1f)
+                fun cx(x: Float) = (x * s).coerceIn(1f, w - 1f)
+                fun cy(y: Float) = (y * s).coerceIn(1f, h - 1f)
+                val down = SystemClock.uptimeMillis()
+                fun send(action: Int, x: Float, y: Float, t: Long) {
+                    val e = MotionEvent.obtain(down, t, action, cx(x), cy(y), 0)
+                    e.source = InputDevice.SOURCE_TOUCHSCREEN
+                    wv.dispatchTouchEvent(e); e.recycle()
+                }
+                send(MotionEvent.ACTION_DOWN, x1, y1, down)
+                val steps = 14
+                for (k in 1..steps) main.postDelayed({
+                    send(MotionEvent.ACTION_MOVE, x1 + (x2 - x1) * k / steps, y1 + (y2 - y1) * k / steps, down + k * 16L)
+                }, k * 16L)
+                main.postDelayed({ send(MotionEvent.ACTION_UP, x2, y2, down + (steps + 1) * 16L) }, (steps + 1) * 16L)
+            }
+        }
     }
 
     /** Ouverture en arrière-plan. À appeler sur le thread principal. */

@@ -1,3 +1,11 @@
+## WM Opener 1.3.0
+
+- **Défilement des cartes** : l'écran « Carte i / 5 » est un carrousel. Pour passer à la carte suivante, l'appli essaie dans l'ordre : la flèche ›, le bouton « Encore N cartes », un vrai glissement tactile envoyé par Android (comme un doigt), un glissement simulé, puis un toucher sur la carte. La première méthode qui fonctionne est retenue pour la suite.
+- Quand les 5 cartes ont été vues, l'appli clique « Continuer » et passe au paquet suivant.
+- Le journal indique la méthode retenue (« avance par … »).
+
+---
+
 ## WM Opener 1.2.0
 
 - **Les 5 cartes de chaque paquet sont vues** : sur l'écran « Carte i / 5 », l'appli attend que le bouton « Continuer » apparaisse (jusqu'à 15 s par carte), le clique, puis passe à la carte suivante. Elle n'ouvre le paquet suivant qu'une fois les 5 cartes vues. En dernier recours, elle touche la carte.

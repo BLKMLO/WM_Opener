@@ -13,10 +13,12 @@ data class Entry(
     val opened: Int,
     val cards: List<Card>,
     val note: String = "",    // ce qui s'est passé quand aucune carte n'a été repérée
+    val trace: List<String> = emptyList(),  // déroulé du passage (affiché en touchant l'entrée)
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("t", time).put("s", source).put("n", opened)
         .put("o", note)
+        .put("d", JSONArray(trace))
         .put("c", JSONArray().apply { cards.forEach { put(JSONObject().put("r", it.rarity).put("n", it.name)) } })
 
     companion object {
@@ -26,6 +28,7 @@ data class Entry(
                 (0 until a.length()).map { a.getJSONObject(it).let { c -> Card(c.optString("r"), c.optString("n")) } }
             },
             o.optString("o", ""),
+            (o.optJSONArray("d") ?: JSONArray()).let { d -> (0 until d.length()).map { d.optString(it) } },
         )
     }
 }

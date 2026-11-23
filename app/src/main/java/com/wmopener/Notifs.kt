@@ -52,7 +52,7 @@ object Notifs {
     /** Notification permanente : affichée tant que le mode automatique est actif. */
     fun showStatus(ctx: Context) {
         val prefs = Prefs(ctx)
-        if (!prefs.autoEnabled) { cancelStatus(ctx); return }
+        if (!prefs.autoEnabled || !prefs.notifStatus) { cancelStatus(ctx); return }
         if (!canPost(ctx)) return
         channels(ctx)
         val last = if (prefs.lastRunAt > 0) "Dernier passage ${hhmm(prefs.lastRunAt)} · ${prefs.lastRunSummary}" else "Premier passage à venir"
@@ -91,7 +91,7 @@ object Notifs {
     }
 
     fun result(ctx: Context, title: String, text: String) {
-        if (!canPost(ctx)) return
+        if (!canPost(ctx) || !Prefs(ctx).notifResult) return
         channels(ctx)
         val n = NotificationCompat.Builder(ctx, CH_RESULT)
             .setSmallIcon(R.drawable.ic_stat)

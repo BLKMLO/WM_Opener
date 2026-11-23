@@ -80,8 +80,11 @@
       const rar = (b.textContent || "").trim();
       if (!RARITY.test(rar)) return;
       const hint = (b.getAttribute("style") || "") + " " + (b.getAttribute("class") || "");
-      // Hors écran de révélation, on exige un indice « rarity » (évite les faux positifs).
-      if ((!/rarity/i.test(hint) && !reveal()) || !visible(b)) return;
+      // Badge du site (style var(--color-rarity-xx)) : pris même s'il n'est pas « visible ».
+      // Le carrousel contient les 5 cartes dès l'ouverture, et dans la page invisible de
+      // l'arrière-plan les cartes non affichées (ou pas encore animées) n'ont pas de taille.
+      // Sans cet indice, on n'accepte qu'un badge visible sur l'écran « Carte i / n ».
+      if (!/rarity/i.test(hint) && !(reveal() && visible(b))) return;
       let c = b.parentElement;
       for (let k = 0; k < 6 && c && !c.querySelector("h1,h2,h3,h4"); k++) c = c.parentElement;
       const h = c && c.querySelector("h1,h2,h3,h4");

@@ -1,3 +1,11 @@
+## WM Opener 1.3.2
+
+- **Cartes dans l'historique** : les 5 cartes du carrousel sont lues dès l'ouverture du paquet, même invisibles. En arrière-plan, la page n'est pas affichée et les cartes n'avaient pas de taille, donc l'appli les ignorait.
+- **Déroulé de chaque passage** : touchez une entrée de l'historique pour voir les cartes et le déroulé pas à pas (avec un bouton Copier).
+- **Notifications réglables** (onglet Auto) : permanente, pendant l'ouverture, résultats. Chacune peut être coupée sans arrêter le mode automatique. Sans la notification d'ouverture, Android peut interrompre un passage plus facilement.
+
+---
+
 ## WM Opener 1.3.1
 
 - **Vérification anti-robot du site** (« Vérification rapide… On vérifie que tu es bien humain ») : l'appli la reconnaît et attend qu'elle se termine d'elle-même, jusqu'à 45 s, sans jamais interagir avec elle. Si elle reste affichée, le passage s'arrête et l'historique l'indique.

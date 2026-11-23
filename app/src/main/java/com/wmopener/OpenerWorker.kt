@@ -36,7 +36,9 @@ class OpenerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             // Notification "en cours" non effaçable pendant tout le passage. Android peut
             // refuser le premier plan depuis l'arrière-plan (sans exemption batterie) :
             // l'ouverture continue alors sans cette notification.
-            val foreground = try { setForeground(fg(0)); true } catch (_: Exception) { false }
+            // Désactivable : sans service de premier plan, le passage tourne comme une tâche
+            // WorkManager ordinaire (Android peut alors l'interrompre plus facilement).
+            val foreground = prefs.notifRun && try { setForeground(fg(0)); true } catch (_: Exception) { false }
             if (foreground) Notifs.cancelStatus(ctx)
 
             val report = withContext(Dispatchers.Main) {

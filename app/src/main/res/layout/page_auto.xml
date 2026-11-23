@@ -137,6 +137,33 @@
         android:textColor="@color/faint"
         android:textSize="12sp" />
 
+    <TextView style="@style/Label" android:text="Notifications" />
+    <LinearLayout style="@style/Panel">
+        <LinearLayout android:id="@+id/rowNotifStatus" style="@style/Row">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingTop="10dp" android:paddingBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Permanente" android:textColor="@color/fg" android:textSize="15sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Rappelle que le mode auto est actif." android:textColor="@color/faint" android:textSize="12sp" />
+            </LinearLayout>
+            <Switch android:id="@+id/swNotifStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:thumbTint="@color/fg" />
+        </LinearLayout>
+        <View style="@style/Divider" />
+        <LinearLayout android:id="@+id/rowNotifRun" style="@style/Row">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingTop="10dp" android:paddingBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pendant l'ouverture" android:textColor="@color/fg" android:textSize="15sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Coupée : Android peut interrompre un passage plus facilement." android:textColor="@color/faint" android:textSize="12sp" />
+            </LinearLayout>
+            <Switch android:id="@+id/swNotifRun" android:layout_width="wrap_content" android:layout_height="wrap_content" android:thumbTint="@color/fg" />
+        </LinearLayout>
+        <View style="@style/Divider" />
+        <LinearLayout android:id="@+id/rowNotifResult" style="@style/Row">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingTop="10dp" android:paddingBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Résultats" android:textColor="@color/fg" android:textSize="15sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Paquets ouverts, session expirée." android:textColor="@color/faint" android:textSize="12sp" />
+            </LinearLayout>
+            <Switch android:id="@+id/swNotifResult" android:layout_width="wrap_content" android:layout_height="wrap_content" android:thumbTint="@color/fg" />
+        </LinearLayout>
+    </LinearLayout>
+
     <TextView style="@style/Label" android:text="Autorisations" />
     <LinearLayout style="@style/Panel">
         <LinearLayout android:id="@+id/permNotif" style="@style/Row">

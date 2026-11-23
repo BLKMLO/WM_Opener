@@ -99,6 +99,13 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   carte n'a été repérée. Un passage auto à 14:31 (version probablement 1.3.0) : 1 paquet, aucune carte ; cause inconnue,
   journal demandé.
 
+- 15:25 : entrées auto de 14:48, 15:07 et 15:24 avec l'ancien libellé « Cartes non repérées sur la page », donc
+  probablement encore en 1.3.0. Hypothèse retenue : dans la WebView sans fenêtre, les slides n'ont pas de taille, et `visible()`
+  les écartait. 1.3.2 (versionCode 9) : un badge `style*=rarity` est accepté même invisible (le carrousel contient les 5 cartes
+  dès l'ouverture). Maquette « slides invisibles + carrousel bloqué » : 5 cartes relevées. `Entry.trace` (JSON « d »)
+  s'affiche en touchant l'entrée. Notifications : `Prefs.notifStatus/notifRun/notifResult`. Si `notifRun` est coupé, pas de
+  `setForeground`. L'utilisatrice voit encore la vérification du site, qui est gérée (attente passive).
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

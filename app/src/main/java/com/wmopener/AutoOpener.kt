@@ -189,7 +189,9 @@ object AutoOpener {
         val n = r.optInt("opened")
         if (n > 0) {
             val cards = History.parseCards(r)
-            History.add(context, Entry(System.currentTimeMillis(), source, n, cards, if (cards.isEmpty()) summary else ""))
+            val trace = r.optJSONArray("trace")?.let { t -> (0 until t.length()).map { t.optString(it) } }.orEmpty()
+            History.add(context, Entry(System.currentTimeMillis(), source, n, cards,
+                if (cards.isEmpty()) summary else "", trace.takeLast(60)))
         }
         return summary
     }

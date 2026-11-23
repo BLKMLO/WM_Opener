@@ -364,6 +364,27 @@ class MainActivity : Activity() {
         }
         findViewById<View>(R.id.permBattery).setOnClickListener { requestBattery() }
 
+        // Notifications : trois interrupteurs indépendants.
+        val track = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(getColor(R.color.accent), getColor(R.color.line))
+        )
+        listOf(
+            Triple(R.id.swNotifStatus, R.id.rowNotifStatus, "status"),
+            Triple(R.id.swNotifRun, R.id.rowNotifRun, "run"),
+            Triple(R.id.swNotifResult, R.id.rowNotifResult, "result"),
+        ).forEach { (swId, rowId, key) ->
+            val s = findViewById<Switch>(swId)
+            s.trackTintList = track
+            s.isChecked = when (key) { "status" -> prefs.notifStatus; "run" -> prefs.notifRun; else -> prefs.notifResult }
+            s.setOnCheckedChangeListener { _, on ->
+                when (key) { "status" -> prefs.notifStatus = on; "run" -> prefs.notifRun = on; else -> prefs.notifResult = on }
+                if (key == "status") Notifs.showStatus(this)
+                refreshAll()
+            }
+            findViewById<View>(rowId).setOnClickListener { s.toggle() }
+        }
+
         findViewById<View>(R.id.rowDetect).setOnClickListener { showDetection() }
         findViewById<View>(R.id.rowMax).setOnClickListener { showMax() }
         findViewById<View>(R.id.rowLog).setOnClickListener { showLog() }
@@ -404,7 +425,7 @@ class MainActivity : Activity() {
         findViewById<Switch>(R.id.autoSwitch).isChecked = auto
         findViewById<TextView>(R.id.autoSub).text = when {
             running -> "Ouverture en cours…"
-            auto -> "Toutes les ${label(prefs.intervalMinutes)}, notification permanente"
+            auto -> "Toutes les ${label(prefs.intervalMinutes)}" + if (prefs.notifStatus) ", notification permanente" else ""
             else -> "Désactivé"
         }
         findViewById<TextView>(R.id.lastRun).text =
@@ -521,6 +542,19 @@ class MainActivity : Activity() {
     private fun setupHistory() {
         val list = findViewById<ListView>(R.id.historyList)
         list.adapter = adapter
+        // Toucher une entrée : déroulé du passage (pour comprendre une carte non repérée).
+        list.setOnItemClickListener { _, _, p, _ ->
+            val e = history[p]
+            val body = buildString {
+                append("${dayLabel(e.time)} à ${hhmm(e.time)} · ${e.opened} paquet(s) · ${e.source}\n")
+                if (e.note.isNotBlank()) append(e.note).append('\n')
+                if (e.cards.isNotEmpty()) append("\nCartes : ").append(e.cards.joinToString(", ") { "${it.rarity} ${it.name}" }).append('\n')
+                append("\nDéroulé :\n")
+                if (e.trace.isEmpty()) append("(non enregistré : passage antérieur à la version 1.3.2)\n")
+                e.trace.forEach { append("· ").append(it).append('\n') }
+            }
+            dialog("Passage de ${hhmm(e.time)}", body, mono = true)
+        }
         list.setOnItemLongClickListener { _, _, p, _ ->
             val e = history[p]
             AlertDialog.Builder(this)

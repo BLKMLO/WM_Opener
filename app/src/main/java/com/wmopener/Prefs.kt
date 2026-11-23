@@ -39,6 +39,17 @@ class Prefs(context: Context) {
         get() = sp.getInt("max", 10)
         set(v) = sp.edit().putInt("max", v.coerceIn(1, 50)).apply()
 
+    /** Notifications, réglables séparément ; le mode auto tourne même si tout est coupé. */
+    var notifStatus: Boolean
+        get() = sp.getBoolean("n_status", true)
+        set(v) = sp.edit().putBoolean("n_status", v).apply()
+    var notifRun: Boolean
+        get() = sp.getBoolean("n_run", true)
+        set(v) = sp.edit().putBoolean("n_run", v).apply()
+    var notifResult: Boolean
+        get() = sp.getBoolean("n_result", true)
+        set(v) = sp.edit().putBoolean("n_result", v).apply()
+
     var lastRunAt: Long
         get() = sp.getLong("last_run", 0L)
         set(v) = sp.edit().putLong("last_run", v).apply()

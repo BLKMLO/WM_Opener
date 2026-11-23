@@ -37,6 +37,9 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
@@ -82,6 +85,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
         setContentView(R.layout.activity_main)
+        applyInsets()
         Notifs.channels(this)
 
         setupWeb()
@@ -150,6 +154,32 @@ class MainActivity : Activity() {
             tab != TAB_GAME -> showTab(TAB_GAME)
             else -> @Suppress("DEPRECATION") super.onBackPressed()
         }
+    }
+
+    /**
+     * Android 15 (targetSdk 35) impose l'affichage bord à bord : sans ceci, l'en-tête passe
+     * sous la barre d'état et les onglets sous la barre de navigation. On l'active pour
+     * toutes les versions et on réserve les marges : haut = barre d'état (fond de l'en-tête),
+     * bas = barre de navigation (fond des onglets), clavier = remonte tout l'écran.
+     */
+    private fun applyInsets() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+        val root = findViewById<View>(R.id.root)
+        val tabs = findViewById<View>(R.id.tabs)
+        val tabsHeight = dp(56)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, (ime.bottom - bars.bottom).coerceAtLeast(0))
+            tabs.setPadding(0, 0, 0, bars.bottom)
+            tabs.layoutParams = tabs.layoutParams.apply { height = tabsHeight + bars.bottom }
+            WindowInsetsCompat.CONSUMED
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     // ───────────────────────────── Jeu (WebView) ─────────────────────────────

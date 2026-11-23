@@ -11,6 +11,9 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
 - Next.js (turbopack) hébergé sur Vercel, auth Supabase (projet `cyrxjeppjqsxxjayfrur`), session en cookies (`@supabase/ssr`).
 - La connexion exige un captcha Cloudflare Turnstile, donc pas de login automatisé : l'utilisatrice se connecte dans la WebView.
 - `manifest.webmanifest` : `start_url` = `/pulls` (la page des paquets). `/pulls` redirige vers `/login` sans session.
+- Capture de l'utilisatrice (2026-11-23) : l'ouverture d'un paquet affiche « Carte 1 / 5 » (5 cartes par paquet), une
+  carte en grand (badge de rareté, nom en titre, description, attaque et défense), et en dessous des boutons ronds sans texte visible.
+  La barre du site contient Paquets / Collection / Échanges / Marché / Plus, plus un compteur de monnaie « W ».
 - **Inconnu** : le DOM de `/pulls` et les libellés des boutons (page réservée aux comptes connectés). Les regex par défaut
   sont des suppositions, d'où le bouton Diagnostic.
 - Cartes (page d'accueil) : badge de rareté `style="background-color:var(--color-rarity-xx)"` avec le texte C/PC/R/SR/UR/L,
@@ -50,6 +53,9 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
 
 ## Historique des versions
 - 1.0.0 (versionCode 2) : première release, avec l'UI soignée, l'historique, les notifications et la passe sécurité.
+  APK signé avec la clé de l'utilisatrice (secrets en place depuis le 2026-11-23, empreinte SHA-256 AD:C9:04:1A:…:25:01:10).
+- 1.0.1 (versionCode 3) : bord à bord sous Android 15. `applyInsets()` dans MainActivity réserve barre d'état, barre de
+  navigation et clavier. Les captures Robolectric n'ont pas d'insets : le test `insets` les simule (rendu dans app/build/).
 
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic.

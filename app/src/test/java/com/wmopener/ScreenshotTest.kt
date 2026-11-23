@@ -44,6 +44,20 @@ class ScreenshotTest {
         a.window.decorView.captureRoboImage("../docs/screenshots/$name.png")
     }
 
+    @Test fun insets() {
+        val a = Robolectric.buildActivity(MainActivity::class.java,
+            android.content.Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, MainActivity.TAB_AUTO)).setup().get()
+        val d = a.resources.displayMetrics.density
+        val bars = androidx.core.graphics.Insets.of(0, (24 * d).toInt(), 0, (48 * d).toInt())
+        val insets = androidx.core.view.WindowInsetsCompat.Builder()
+            .setInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars(), bars).build()
+        val root = a.findViewById<android.view.View>(R.id.root)
+        androidx.core.view.ViewCompat.dispatchApplyWindowInsets(root, insets)
+        root.requestLayout()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        a.window.decorView.captureRoboImage("build/insets_check.png")
+    }
+
     @Test fun auto() = shot(MainActivity.TAB_AUTO, "auto")
     @Test fun history() = shot(MainActivity.TAB_HISTORY, "historique")
 }

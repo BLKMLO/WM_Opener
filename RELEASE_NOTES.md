@@ -1,8 +1,17 @@
+## WM Opener 1.0.1
+
+### Correctif
+- Android 15 : l'en-tête passait sous la barre d'état et les onglets sous les boutons de navigation. Les marges système sont maintenant réservées (et le clavier remonte l'écran).
+
+Mise à jour : installez par-dessus la 1.0.0 signée (même clé, l'historique et la connexion sont conservés).
+
+---
+
 ## WM Opener 1.0.0
 
 Ouverture automatique des paquets wiki-masters.com en arrière-plan.
 
-**Installation** : téléchargez `WM_Opener-v1.0.0.apk` ci-dessous, ouvrez-le sur le téléphone et autorisez l'installation depuis cette source.
+**Installation** : téléchargez `WM_Opener-vX.Y.Z.apk` ci-dessous, ouvrez-le sur le téléphone et autorisez l'installation depuis cette source.
 
 ### Contenu
 - Onglets **Jeu** (le site), **Auto** (pilotage) et **Historique**.

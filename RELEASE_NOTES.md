@@ -1,3 +1,18 @@
+## WM Opener 1.1.0
+
+### Corrigé
+- **Faux décomptes** : un paquet n'est plus compté sur un simple clic. Il faut que le site le confirme (baisse du compteur « X / 10 paquets disponibles » ou apparition de l'écran « Carte 1 / 5 »). Un clic sans effet est signalé comme tel.
+- **Écran « Carte i / 5 »** : les boutons ronds sans texte sont maintenant reconnus par leur icône (flèche « suivant »). Le bouton de fermeture (✕) n'est jamais cliqué.
+- **Cartes non repérées** : la détection accepte les badges de rareté par style ou par classe.
+- L'onglet Jeu se recharge après un passage en arrière-plan, pour afficher le vrai compteur.
+
+### Nouveau
+- **Diagnostic** affiche le compteur de paquets, l'écran de révélation, l'état des animations et les boutons-icônes.
+- Bouton **Ouvrir ici** dans le Diagnostic : lance une ouverture dans l'onglet Jeu, sous vos yeux, avec le déroulé pas à pas.
+- Journal technique : le déroulé de chaque passage et l'utilisation (ou non) de la superposition.
+
+---
+
 ## WM Opener 1.0.1
 
 ### Correctif

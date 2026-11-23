@@ -28,7 +28,7 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("open", v).apply()
 
     var followRegex: String
-        get() = sp.getString("follow", DEFAULT_FOLLOW)!!
+        get() = sp.getString("follow", DEFAULT_FOLLOW)!!.let { if (it == OLD_FOLLOW_1_0) DEFAULT_FOLLOW else it }
         set(v) = sp.edit().putString("follow", v).apply()
 
     var excludeRegex: String
@@ -80,7 +80,12 @@ class Prefs(context: Context) {
         // Libellés supposés : la page /pulls n'est visible qu'une fois connecté.
         // Le bouton Diagnostic permet de lire les vrais libellés.
         const val DEFAULT_OPEN = "^(ouvrir|ouvre|open|tirer|tirage|pull)\\b"
-        const val DEFAULT_FOLLOW = "^(tout révéler|révéler|reveal|continuer|suivant|passer|skip|ok|terminer)\\b"
+        // Les boutons ronds de l'écran « Carte i / n » n'ont pas de texte : le script les nomme
+        // d'après leur icône Lucide, ex. « [icône chevron-right] ».
+        const val DEFAULT_FOLLOW = "^(tout révéler|révéler|reveal|continuer|suivant|passer|skip|ok|terminer)\\b" +
+            "|^\\[icône (chevron-right|chevrons-right|arrow-right|move-right|skip-forward|step-forward|fast-forward|check)\\]"
+        /** Valeur par défaut de la 1.0.x, migrée automatiquement si elle a été enregistrée telle quelle. */
+        private const val OLD_FOLLOW_1_0 = "^(tout révéler|révéler|reveal|continuer|suivant|passer|skip|ok|terminer)\\b"
         // Sécurité : jamais d'achat, de monnaie premium ni de publicité.
         const val DEFAULT_EXCLUDE = "achet|acheter|buy|pay|payer|€|\\$|gemme|diamant|boutique|shop|premium|pub|vidéo|video|annonce|regarder|watch"
     }

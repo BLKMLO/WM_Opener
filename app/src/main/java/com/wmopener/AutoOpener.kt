@@ -155,14 +155,19 @@ object AutoOpener {
         webView.stopLoading()
         webView.removeJavascriptInterface("WMBridge")
         webView.destroy()
-        return result
+        return result.put("overlay", attached)
     }
 
     /** Enregistre le résultat (historique, journal, état) et renvoie un résumé lisible. */
     fun record(context: Context, r: JSONObject, source: String): String {
         val prefs = Prefs(context)
         val summary = summarize(r)
-        prefs.addLog("[$source] $summary")
+        prefs.addLog("[$source] $summary" + if (r.has("overlay")) " (superposition ${if (r.optBoolean("overlay")) "oui" else "non"})" else "")
+        // Déroulé détaillé (le journal est affiché du plus récent au plus ancien).
+        r.optJSONArray("trace")?.let { t ->
+            val lines = (0 until t.length()).map { "    · " + t.optString(it) }
+            if (lines.isNotEmpty()) prefs.addLog("[$source] déroulé :\n" + lines.joinToString("\n"))
+        }
         if (source == "diagnostic" || r.optString("mode") == "diagnose") return summary
         prefs.lastRunAt = System.currentTimeMillis()
         prefs.lastRunSummary = summary
@@ -180,6 +185,9 @@ object AutoOpener {
             else -> "Échec : ${r.optString("error").ifEmpty { r.optString("reason") }}"
         }
         r.optString("mode") == "diagnose" -> "Diagnostic : ${r.optJSONArray("buttons")?.length() ?: 0} bouton(s) visibles."
+        r.optInt("opened") == 0 && r.optInt("noEffect") > 0 ->
+            "Clic sur « Ouvrir » sans effet." + if (!r.optBoolean("raf", true))
+                " Animations suspendues : autorisez la superposition." else " Voir le journal."
         r.optInt("opened") == 0 -> "Rien à ouvrir."
         else -> {
             val n = r.optInt("opened"); val c = r.optJSONArray("cards")?.length() ?: 0

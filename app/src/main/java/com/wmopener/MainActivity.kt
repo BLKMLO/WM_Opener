@@ -63,7 +63,7 @@ class MainActivity : Activity() {
     private lateinit var prefs: Prefs
     private lateinit var web: WebView
     private var tab = TAB_GAME
-    private var pendingDiagnose = false
+    private var pendingMode: String? = null
     private var running = false
     private var nextRunAt = 0L
     private val history = mutableListOf<Entry>()
@@ -198,34 +198,56 @@ class MainActivity : Activity() {
         web.webViewClient = object : AutoOpener.SiteClient(this, external = true) {
             override fun onPageFinished(view: WebView, url: String) {
                 CookieManager.getInstance().flush()
-                if (pendingDiagnose && AutoOpener.isSiteUrl(url)) {
-                    pendingDiagnose = false
-                    view.evaluateJavascript(AutoOpener.buildScript(this@MainActivity, prefs, "diagnose"), null)
+                val mode = pendingMode
+                if (mode != null && AutoOpener.isSiteUrl(url)) {
+                    pendingMode = null
+                    view.evaluateJavascript(AutoOpener.buildScript(this@MainActivity, prefs, mode), null)
                 }
             }
         }
-        web.addJavascriptInterface(AutoOpener.Bridge({ web }) { onDiagnose(it) }, "WMBridge")
+        web.addJavascriptInterface(AutoOpener.Bridge({ web }) { onVisibleReport(it) }, "WMBridge")
     }
 
-    private fun diagnose() {
+    /** Lance le script dans la WebView visible : "diagnose" (lecture seule) ou "open" (test visible). */
+    private fun runVisible(mode: String) {
+        if (mode == "open") {
+            if (running || !AutoOpener.busy.compareAndSet(false, true)) { toast("Une ouverture est déjà en cours"); return }
+            // Garde-fou : libère le verrou si la page ne répond jamais.
+            web.postDelayed({ AutoOpener.busy.set(false) }, 4 * 60 * 1000L)
+        }
         showTab(TAB_GAME)
-        toast("Lecture des boutons de la page…")
+        toast(if (mode == "open") "Ouverture sous vos yeux…" else "Lecture de la page…")
         val target = Uri.parse(prefs.pullsUrl)
         val cur = web.url?.let(Uri::parse)
         if (cur?.host == target.host && cur?.path == target.path) {
-            web.evaluateJavascript(AutoOpener.buildScript(this, prefs, "diagnose"), null)
+            web.evaluateJavascript(AutoOpener.buildScript(this, prefs, mode), null)
         } else {
-            pendingDiagnose = true
+            pendingMode = mode
             web.loadUrl(prefs.pullsUrl)
         }
     }
 
-    private fun onDiagnose(r: JSONObject) {
-        if (r.optString("mode") != "diagnose" && r.optBoolean("ok")) return
-        AutoOpener.record(this, r, "diagnostic")
+    private fun diagnose() = runVisible("diagnose")
+
+    private fun onVisibleReport(r: JSONObject) {
+        val isOpen = r.optString("mode") != "diagnose" && (r.has("opened") || r.has("trace"))
+        if (isOpen) AutoOpener.busy.set(false)
+        AutoOpener.record(this, r, if (isOpen) "manuel" else "diagnostic")
+        if (isOpen) loadHistory()
+
         val text = StringBuilder()
-        text.append(AutoOpener.summarize(r)).append("\n\n")
-        r.optJSONArray("buttons")?.let { b ->
+        text.append(AutoOpener.summarize(r)).append("\n")
+        r.optJSONObject("available")?.let { text.append("Paquets disponibles : ${it.optInt("n")} / ${it.optInt("max")}\n") }
+            ?: text.append("Compteur « paquets disponibles » : non trouvé\n")
+        r.optJSONObject("reveal")?.let { text.append("Écran de révélation : carte ${it.optInt("i")} / ${it.optInt("n")}\n") }
+        if (r.has("raf")) text.append("Animations : ${if (r.optBoolean("raf")) "actives" else "SUSPENDUES"}\n")
+
+        r.optJSONArray("trace")?.takeIf { it.length() > 0 }?.let { t ->
+            text.append("\nDéroulé :\n")
+            for (i in 0 until t.length()) text.append("· ").append(t.optString(i)).append('\n')
+        }
+        r.optJSONArray("buttons")?.takeIf { it.length() > 0 }?.let { b ->
+            text.append("\nBoutons visibles :\n")
             for (i in 0 until b.length()) {
                 val label = b.optString(i)
                 val mark = when {
@@ -237,11 +259,28 @@ class MainActivity : Activity() {
                 text.append(mark.padEnd(7)).append(label).append('\n')
             }
         }
-        r.optJSONArray("cards")?.takeIf { it.length() > 0 }?.let { c ->
-            text.append("\nCartes repérées : ").append(c.length()).append('\n')
+        r.optJSONArray("cards")?.let { c ->
+            text.append("\nCartes repérées : ").append(c.length())
+            for (i in 0 until minOf(c.length(), 10)) c.optJSONObject(i)?.let {
+                text.append("\n  ").append(it.optString("rarity")).append(' ').append(it.optString("name"))
+            }
+            text.append('\n')
         }
         text.append("\nPage : ").append(r.optString("url"))
-        dialog("Diagnostic", text.toString(), mono = true)
+
+        val body = text.toString()
+        val b = AlertDialog.Builder(this)
+            .setTitle(if (isOpen) "Test d'ouverture" else "Diagnostic")
+            .setView(ScrollView(this).apply {
+                addView(TextView(this@MainActivity).apply {
+                    this.text = body; setTextIsSelectable(true); textSize = 12f; typeface = Typeface.MONOSPACE
+                    setTextColor(getColor(R.color.fg)); setPadding(dp(22), dp(8), dp(22), dp(8))
+                })
+            })
+            .setPositiveButton("OK", null)
+            .setNeutralButton("Copier") { _, _ -> copy(body) }
+        if (!isOpen) b.setNegativeButton("Ouvrir ici") { _, _ -> runVisible("open") }
+        b.show()
     }
 
     private fun matches(re: String, s: String) =
@@ -336,7 +375,12 @@ class MainActivity : Activity() {
         running = all.any { it.state == WorkInfo.State.RUNNING }
         nextRunAt = periodicInfo.value.orEmpty()
             .firstOrNull { it.state == WorkInfo.State.ENQUEUED }?.nextScheduleTimeMillis ?: 0L
-        if (wasRunning && !running) loadHistory()
+        if (wasRunning && !running) {
+            loadHistory()
+            // La page du jeu n'a pas vu le passage en arrière-plan : on la recharge pour que
+            // le compteur « paquets disponibles » soit à jour.
+            if (AutoOpener.isSiteUrl(web.url) && pendingMode == null && !AutoOpener.busy.get()) web.reload()
+        }
         refreshAll()
     }
 

@@ -14,6 +14,9 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
 - Capture de l'utilisatrice (2026-11-23) : l'ouverture d'un paquet affiche « Carte 1 / 5 » (5 cartes par paquet), une
   carte en grand (badge de rareté, nom en titre, description, attaque et défense), et en dessous des boutons ronds sans texte visible.
   La barre du site contient Paquets / Collection / Échanges / Marché / Plus, plus un compteur de monnaie « W ».
+- 2e série de captures (13:15) : page `/pulls` = titre « Ouvrir un paquet », image du paquet, bouton texte « Ouvrir »,
+  compteur « 10 / 10 paquets disponibles ». En 1.0.x, l'historique comptait 3 paquets alors que la page affichait encore 10/10
+  (page peut-être pas rechargée) et aucune carte repérée : d'où la 1.1.0 (confirmation par le compteur ou par « Carte i / n »).
 - **Inconnu** : le DOM de `/pulls` et les libellés des boutons (page réservée aux comptes connectés). Les regex par défaut
   sont des suppositions, d'où le bouton Diagnostic.
 - Cartes (page d'accueil) : badge de rareté `style="background-color:var(--color-rarity-xx)"` avec le texte C/PC/R/SR/UR/L,
@@ -57,6 +60,13 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
 - 1.0.1 (versionCode 3) : bord à bord sous Android 15. `applyInsets()` dans MainActivity réserve barre d'état, barre de
   navigation et clavier. Les captures Robolectric n'ont pas d'insets : le test `insets` les simule (rendu dans app/build/).
 
+- 1.1.0 (versionCode 4) : ouverture confirmée par le site (compteur « X / Y paquets disponibles » ou « Carte i / n »),
+  boutons-icônes nommés « [icône <nom lucide>] » (regex `follow` par défaut : chevron-right, etc. ; migration de l'ancienne
+  valeur par défaut dans Prefs), `trace` du déroulé dans le rapport et le journal, test de `requestAnimationFrame` (`raf`),
+  « Ouvrir ici » (ouverture visible depuis le Diagnostic), rechargement de l'onglet Jeu après un passage.
+  Maquette Playwright du déroulé réel : un clic « Ouvrir » → « Carte 1/5 » … 5/5 → retour, compteur décrémenté.
+
 ## À faire / pistes
-- Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic.
+- Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
+  (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).
 - Si l'ouverture se fait par glissement (et non par clic), adapter `opener.js` (événements pointer).

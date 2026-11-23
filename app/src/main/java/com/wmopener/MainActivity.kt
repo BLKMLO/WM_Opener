@@ -57,7 +57,7 @@ class MainActivity : Activity() {
         const val TAB_GAME = "game"
         const val TAB_AUTO = "auto"
         const val TAB_HISTORY = "history"
-        private val INTERVALS = listOf(15L to "15 min", 30L to "30 min", 60L to "1 h", 120L to "2 h", 240L to "4 h")
+        private val INTERVALS = listOf(10L to "10 min", 15L to "15 min", 30L to "30 min", 60L to "1 h", 120L to "2 h", 240L to "4 h")
     }
 
     private lateinit var prefs: Prefs
@@ -77,6 +77,7 @@ class MainActivity : Activity() {
 
     private lateinit var periodicInfo: LiveData<List<WorkInfo>>
     private lateinit var onceInfo: LiveData<List<WorkInfo>>
+    private lateinit var chainInfo: LiveData<List<WorkInfo>>
     private val workObserver = Observer<List<WorkInfo>> { onWorkChanged() }
 
     // ───────────────────────────── Cycle de vie ─────────────────────────────
@@ -98,6 +99,8 @@ class MainActivity : Activity() {
         onceInfo = wm.getWorkInfosForUniqueWorkLiveData(OpenerWorker.onceName())
         periodicInfo.observeForever(workObserver)
         onceInfo.observeForever(workObserver)
+        chainInfo = wm.getWorkInfosForUniqueWorkLiveData(OpenerWorker.chainName())
+        chainInfo.observeForever(workObserver)
 
         if (savedInstanceState == null) {
             web.loadUrl(prefs.pullsUrl)
@@ -136,6 +139,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         periodicInfo.removeObserver(workObserver)
         onceInfo.removeObserver(workObserver)
+        chainInfo.removeObserver(workObserver)
         web.removeJavascriptInterface("WMBridge")
         web.destroy()
         super.onDestroy()
@@ -394,10 +398,10 @@ class MainActivity : Activity() {
     }
 
     private fun onWorkChanged() {
-        val all = (periodicInfo.value.orEmpty() + onceInfo.value.orEmpty())
+        val all = (periodicInfo.value.orEmpty() + onceInfo.value.orEmpty() + chainInfo.value.orEmpty())
         val wasRunning = running
         running = all.any { it.state == WorkInfo.State.RUNNING }
-        nextRunAt = periodicInfo.value.orEmpty()
+        nextRunAt = (if (prefs.intervalMinutes < 15) chainInfo.value.orEmpty() else periodicInfo.value.orEmpty())
             .firstOrNull { it.state == WorkInfo.State.ENQUEUED }?.nextScheduleTimeMillis ?: 0L
         if (wasRunning && !running) {
             loadHistory()

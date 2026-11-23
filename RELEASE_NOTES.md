@@ -1,3 +1,11 @@
+## WM Opener 1.4.0
+
+- **Défilement des cartes en arrière-plan** : la page invisible était considérée comme cachée par le moteur du navigateur, qui figeait ses animations. La carte restait transparente et la flèche › désactivée, d'où une seule carte lue par paquet. L'appli annonce désormais une page visible et relaie les animations par une minuterie quand le moteur n'en produit plus. La vérification anti-robot n'est pas touchée.
+- **Fréquence de 10 min** : Android interdit les tâches périodiques de moins de 15 min. En 10 min, chaque passage programme donc le suivant, et une tâche de garde (toutes les heures) relance la chaîne si elle s'interrompt. Android peut retarder ces passages en économie d'énergie.
+- En cas de blocage, le déroulé indique l'état des flèches et du bouton « Encore », ainsi que le nombre d'images d'animation produites.
+
+---
+
 ## WM Opener 1.3.2
 
 - **Cartes dans l'historique** : les 5 cartes du carrousel sont lues dès l'ouverture du paquet, même invisibles. En arrière-plan, la page n'est pas affichée et les cartes n'avaient pas de taille, donc l'appli les ignorait.

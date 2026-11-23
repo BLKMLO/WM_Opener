@@ -16,6 +16,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
@@ -149,13 +151,24 @@ object AutoOpener {
             webView.layout(0, 0, 1080, 2340)
         }
 
+        // Page « visible » et animations relayées (voir assets/background.js).
+        val bgScript = context.assets.open("background.js").bufferedReader().use { it.readText() }
+        val docStart = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+        if (docStart) WebViewCompat.addDocumentStartJavaScript(webView, bgScript, Prefs.SITE_HOSTS.map { "https://$it" }.toSet())
+        webView.onResume()
+        webView.resumeTimers()
+
         val script = buildScript(context, prefs, "open")
         var injected = false
         webView.webViewClient = object : SiteClient(context, external = false) {
+            override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                if (!docStart && isSiteUrl(url)) view.evaluateJavascript(bgScript, null)
+            }
             override fun onPageFinished(view: WebView, url: String) {
                 if (injected) return
                 if (!isSiteUrl(url)) return
                 injected = true
+                if (!docStart) view.evaluateJavascript(bgScript, null)
                 view.evaluateJavascript(script, null)
             }
         }

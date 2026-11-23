@@ -13,6 +13,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -28,6 +29,12 @@ class OpenerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     override suspend fun doWork(): Result {
         val ctx = applicationContext
         val prefs = Prefs(ctx)
+        // Garde : relance la chaîne des passages rapprochés si elle s'est interrompue.
+        if (inputData.getBoolean(KEY_WATCHDOG, false)) {
+            if (prefs.autoEnabled && prefs.intervalMinutes < 15) enqueueChain(ctx, ExistingWorkPolicy.KEEP)
+            return Result.success()
+        }
+        val chained = inputData.getBoolean(KEY_CHAIN, false)
         if (!AutoOpener.busy.compareAndSet(false, true)) {
             prefs.addLog("[auto] Ignoré : une ouverture est déjà en cours.")
             return Result.success()
@@ -62,6 +69,8 @@ class OpenerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         } finally {
             AutoOpener.busy.set(false)
             Notifs.showStatus(ctx)
+            // Passage suivant de la chaîne, placé derrière celui-ci.
+            if (chained && prefs.autoEnabled && prefs.intervalMinutes < 15) enqueueChain(ctx, ExistingWorkPolicy.APPEND_OR_REPLACE)
         }
         return Result.success()
     }
@@ -69,6 +78,9 @@ class OpenerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     companion object {
         private const val PERIODIC = "wm_auto_open"
         private const val ONCE = "wm_open_once"
+        private const val CHAIN = "wm_auto_chain"
+        private const val KEY_CHAIN = "chain"
+        private const val KEY_WATCHDOG = "watchdog"
 
         private val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
@@ -76,10 +88,20 @@ class OpenerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             val prefs = Prefs(context)
             val wm = WorkManager.getInstance(context)
             if (!prefs.autoEnabled) {
-                wm.cancelUniqueWork(PERIODIC); Notifs.cancelStatus(context); return
+                wm.cancelUniqueWork(PERIODIC); wm.cancelUniqueWork(CHAIN); Notifs.cancelStatus(context); return
             }
-            val req = PeriodicWorkRequestBuilder<OpenerWorker>(prefs.intervalMinutes, TimeUnit.MINUTES)
-                .setConstraints(constraints).build()
+            val chainMode = prefs.intervalMinutes < 15
+            val req = if (chainMode) {
+                // Android refuse les tâches périodiques sous 15 min : chaque passage programme le
+                // suivant ; une tâche périodique d'1 h sert de garde si la chaîne casse.
+                enqueueChain(context, if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP)
+                PeriodicWorkRequestBuilder<OpenerWorker>(60, TimeUnit.MINUTES)
+                    .setInputData(workDataOf(KEY_WATCHDOG to true)).build()
+            } else {
+                wm.cancelUniqueWork(CHAIN)
+                PeriodicWorkRequestBuilder<OpenerWorker>(prefs.intervalMinutes, TimeUnit.MINUTES)
+                    .setConstraints(constraints).build()
+            }
             wm.enqueueUniquePeriodicWork(
                 PERIODIC,
                 if (replace) ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE else ExistingPeriodicWorkPolicy.UPDATE,
@@ -96,7 +118,20 @@ class OpenerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             )
         }
 
+        fun enqueueChain(context: Context, policy: ExistingWorkPolicy) {
+            val delay = Prefs(context).intervalMinutes
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                CHAIN, policy,
+                OneTimeWorkRequestBuilder<OpenerWorker>()
+                    .setInitialDelay(delay, TimeUnit.MINUTES)
+                    .setConstraints(constraints)
+                    .setInputData(workDataOf(KEY_CHAIN to true))
+                    .build()
+            )
+        }
+
         fun periodicName() = PERIODIC
+        fun chainName() = CHAIN
         fun onceName() = ONCE
     }
 }

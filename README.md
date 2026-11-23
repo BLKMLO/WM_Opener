@@ -21,7 +21,7 @@ Application Android qui ouvre automatiquement vos paquets de cartes sur wiki-mas
 4. Essayez **Ouvrir maintenant**, puis activez le mode automatique.
 
 ## Fonctionnement
-- À chaque passage (toutes les 15 min à 4 h), une page invisible charge `/pulls` et exécute `app/src/main/assets/opener.js`.
+- À chaque passage (toutes les 10 min à 4 h), une page invisible charge `/pulls` et exécute `app/src/main/assets/opener.js`.
   Le script clique « ouvrir », puis « révéler / continuer… », et recommence jusqu'au maximum réglé.
 - Une notification permanente reste affichée tant que le mode automatique est actif. Pendant chaque ouverture, elle cède
   la place à une notification de progression non effaçable.

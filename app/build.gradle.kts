@@ -17,8 +17,8 @@ android {
         applicationId = "com.wmopener"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.3.2"
+        versionCode = 10
+        versionName = "1.4.0"
     }
 
     signingConfigs {
@@ -56,6 +56,7 @@ android {
 dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.webkit:webkit:1.12.1")
 
     // Captures d'écran de l'interface sur la JVM (aucune incidence sur l'APK).
     testImplementation("junit:junit:4.13.2")

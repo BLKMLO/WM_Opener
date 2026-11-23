@@ -106,6 +106,17 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   s'affiche en touchant l'entrée. Notifications : `Prefs.notifStatus/notifRun/notifResult`. Si `notifRun` est coupé, pas de
   `setForeground`. L'utilisatrice voit encore la vérification du site, qui est gérée (attente passive).
 
+- Déroulé réel 15:55 (1.3.2, arrière-plan) : vérification passée en 15 s, paquet ouvert, puis « écran révélation » sans
+  badge ni titre visibles, toutes les méthodes `ADVANCE` sans effet, 1 seule carte lue (Catequilla). Diagnostic : WebView
+  sans fenêtre = page cachée pour Chromium, plus d'images (rAF), animations figées (carte à opacité 0, flèche › désactivée).
+  Reproduit en Playwright (rAF neutralisé + document.hidden) : même déroulé, état « flèches [button désactivée …] ».
+- 1.4.0 (versionCode 10) : `assets/background.js` injecté au début du document (androidx.webkit
+  `addDocumentStartJavaScript`, origines wiki-masters ; sinon evaluateJavascript à onPageStarted/onPageFinished),
+  **uniquement** dans `runHeadless` : visibilityState « visible », hidden=false, et rAF doublé d'un setTimeout(20 ms)
+  (compteurs `__wmBg.native/timer` affichés dans « état : … » en cas de blocage). Avec ce correctif, la même maquette défile
+  les 5 cartes. Fréquence 10 min : chaîne de OneTimeWork `wm_auto_chain` (APPEND_OR_REPLACE en fin de passage) + garde
+  périodique 1 h (`watchdog`). `Prefs.intervalMinutes` : minimum 10.
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

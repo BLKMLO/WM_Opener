@@ -14,10 +14,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("auto", false)
         set(v) = sp.edit().putBoolean("auto", v).apply()
 
-    /** WorkManager impose 15 min minimum entre deux passages périodiques. */
+    /** Sous 15 min (minimum des tâches périodiques), les passages sont enchaînés un à un. */
     var intervalMinutes: Long
         get() = sp.getLong("interval", 30L)
-        set(v) = sp.edit().putLong("interval", v.coerceIn(15L, 24 * 60L)).apply()
+        set(v) = sp.edit().putLong("interval", v.coerceIn(10L, 24 * 60L)).apply()
 
     var pullsUrl: String
         get() = sp.getString("url", DEFAULT_URL)!!.takeIf(::isAllowedUrl) ?: DEFAULT_URL

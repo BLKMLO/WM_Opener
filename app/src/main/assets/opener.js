@@ -249,6 +249,18 @@
     };
     let method = null;   // méthode retenue (conservée d'un paquet à l'autre)
 
+    // Ce qui bloque, pour le déroulé : flèches, bouton « Encore », images produites.
+    const stuckState = () => {
+      const arrows = [...document.querySelectorAll("svg[class*='lucide-chevron-right']")].map((svg) => {
+        const t = svg.closest('button,[role="button"],a') || svg.parentElement;
+        const r = t.getBoundingClientRect(), cs = getComputedStyle(t);
+        return `${t.tagName.toLowerCase()}${t.disabled ? " désactivée" : ""} ${Math.round(r.width)}x${Math.round(r.height)} opacité ${cs.opacity}`;
+      });
+      const enc = [...document.querySelectorAll("button,div,span")].find((e) => /^encore\s+\d+/i.test((e.innerText || e.textContent || "").trim()));
+      const bg = window.__wmBg ? `images moteur ${window.__wmBg.native}, minuterie ${window.__wmBg.timer}` : "page visible";
+      return `flèches [${arrows.join(" ; ")}], « Encore » ${enc ? "présent" : "absent"}, ${bg}, document ${document.visibilityState}`;
+    };
+
     const finishReveal = async () => {
       let fails = 0;
       for (let step = 0; step < 40; step++) {
@@ -279,7 +291,11 @@
           }
         }
         if (ok) { fails = 0; continue; }
-        if (++fails >= 3) { log(`carte ${r0.i}/${r0.n} : impossible d'avancer (${order.join(", ")} sans effet)`); return; }
+        if (++fails >= 3) {
+          log(`carte ${r0.i}/${r0.n} : impossible d'avancer (${order.join(", ")} sans effet)`);
+          log("état : " + stuckState());
+          return;
+        }
         await sleep(2000);   // laisse le temps à « Continuer » d'apparaître
       }
     };

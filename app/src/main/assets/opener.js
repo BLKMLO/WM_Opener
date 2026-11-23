@@ -140,24 +140,64 @@
     const baseline = new Set(cardsOnScreen().keys());
     const collect = () => cardsOnScreen().forEach((v, k) => { if (!baseline.has(k)) found.set(k, v); });
 
-    // Fait défiler l'écran « Carte i / n » jusqu'au bout.
+    // Carte affichée : bloc qui contient le badge de rareté et le titre.
+    const cardElement = () => {
+      for (const b of document.querySelectorAll('[style*="--color-rarity-"],[class*="rarity"]')) {
+        if (!visible(b)) continue;
+        let c = b.parentElement;
+        for (let k = 0; k < 6 && c && !c.querySelector("h1,h2,h3,h4"); k++) c = c.parentElement;
+        if (c) return c;
+      }
+      return null;
+    };
+    const tap = (el) => {
+      const r = el.getBoundingClientRect();
+      const o = { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+      for (const t of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"])
+        el.dispatchEvent(t.startsWith("pointer") ? new PointerEvent(t, o) : new MouseEvent(t, o));
+    };
+
+    // Fait défiler l'écran « Carte i / n » jusqu'au bout. Sur le site, chaque carte doit être vue :
+    // le bouton « Continuer » n'apparaît qu'après l'animation de la carte (plusieurs secondes).
     const finishReveal = async () => {
-      for (let step = 0; step < 30; step++) {
+      let stuck = 0, tapped = false;
+      for (let step = 0; step < 40; step++) {
         logReveal();
         collect();
         const before = reveal();
         if (!before) return;
-        const f = find(followRe);
-        if (!f) { log(`révélation ${before.i}/${before.n} : aucun bouton de suite`); return; }
-        log(`clic « ${label(f)} »`);
-        f.click();
-        await sleep(1300);
-        const after = reveal();
-        if (after && before.i === after.i) {
-          await sleep(1500);
-          const again = reveal();
-          if (again && again.i === before.i) { log("clic sans effet sur la révélation"); return; }
+
+        let f = null;
+        for (let w = 0; w < 30 && !f; w++) {         // jusqu'à 15 s
+          f = find(followRe);
+          if (!f) { await sleep(500); collect(); if (!reveal()) return; }
         }
+        if (!f) {
+          const card = cardElement();
+          if (card && !tapped) {                     // dernier recours : toucher la carte
+            tapped = true;
+            log(`carte ${before.i}/${before.n} : pas de bouton de suite, je touche la carte`);
+            tap(card);
+            await sleep(1500);
+            const a = reveal();
+            if (!a || a.i !== before.i) tapped = false;   // la carte a avancé : on pourra retoucher
+            continue;
+          }
+          log(`carte ${before.i}/${before.n} : aucun bouton de suite`);
+          return;
+        }
+        log(`carte ${before.i}/${before.n} : clic « ${label(f)} »`);
+        f.click();
+
+        let changed = false;
+        for (let w = 0; w < 12 && !changed; w++) {   // jusqu'à 6 s
+          await sleep(500);
+          collect();
+          const a = reveal();
+          changed = !a || a.i !== before.i || a.n !== before.n;
+        }
+        if (changed) { stuck = 0; tapped = false; }
+        else if (++stuck >= 3) { log(`carte ${before.i}/${before.n} : clics sans effet`); return; }
       }
     };
 
@@ -198,6 +238,8 @@
       await sleep(1200);
       await finishReveal();
       collect();
+      // Bilan partiel : conservé par l'appli si le passage est interrompu (délai dépassé).
+      progress({ opened, cards: [...found.values()] });
       await sleep(1500);
       if (onLogin()) break;
     }

@@ -1,3 +1,11 @@
+## WM Opener 1.2.0
+
+- **Les 5 cartes de chaque paquet sont vues** : sur l'écran « Carte i / 5 », l'appli attend que le bouton « Continuer » apparaisse (jusqu'à 15 s par carte), le clique, puis passe à la carte suivante. Elle n'ouvre le paquet suivant qu'une fois les 5 cartes vues. En dernier recours, elle touche la carte.
+- **Jamais de clic sur « Ajouter aux favoris »** (qui verrouille la carte), ni sur défausse ou vente : ajoutés aux boutons interdits.
+- **Passages longs** : jusqu'à 9 min par passage (10 paquets × 5 cartes). Si le délai est dépassé, les paquets déjà ouverts restent dans l'historique.
+
+---
+
 ## WM Opener 1.1.1
 
 - **Superposition retirée** : Android la bloque pour les applis installées hors Play Store (« paramètre restreint »), et l'ouverture en arrière-plan fonctionne sans elle (vérifié : 4 paquets ouverts, compteur passé de 10 à 6). Une autorisation sensible en moins.

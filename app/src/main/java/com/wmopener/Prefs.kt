@@ -32,7 +32,7 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("follow", v).apply()
 
     var excludeRegex: String
-        get() = sp.getString("exclude", DEFAULT_EXCLUDE)!!
+        get() = sp.getString("exclude", DEFAULT_EXCLUDE)!!.let { if (it == OLD_EXCLUDE_1_0) DEFAULT_EXCLUDE else it }
         set(v) = sp.edit().putString("exclude", v).apply()
 
     var maxPacks: Int
@@ -87,6 +87,8 @@ class Prefs(context: Context) {
         /** Valeur par défaut de la 1.0.x, migrée automatiquement si elle a été enregistrée telle quelle. */
         private const val OLD_FOLLOW_1_0 = "^(tout révéler|révéler|reveal|continuer|suivant|passer|skip|ok|terminer)\\b"
         // Sécurité : jamais d'achat, de monnaie premium ni de publicité.
-        const val DEFAULT_EXCLUDE = "achet|acheter|buy|pay|payer|€|\\$|gemme|diamant|boutique|shop|premium|pub|vidéo|video|annonce|regarder|watch"
+        // « favori » : verrouille la carte (ni défausse, ni vente, ni échange).
+        const val DEFAULT_EXCLUDE = "achet|acheter|buy|pay|payer|€|\\$|gemme|diamant|boutique|shop|premium|pub|vidéo|video|annonce|regarder|watch|favori|défausse|vendre|vente"
+        private const val OLD_EXCLUDE_1_0 = "achet|acheter|buy|pay|payer|€|\\$|gemme|diamant|boutique|shop|premium|pub|vidéo|video|annonce|regarder|watch"
     }
 }

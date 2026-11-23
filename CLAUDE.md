@@ -71,7 +71,16 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   « Carte i / n », tout badge de rareté visible est accepté. Relevé automatique de l'écran de révélation dans `trace`.
 - Diagnostic réel (2026-11-23, page d'accueil /pulls) : boutons « 0 » (monnaie W), « Notifications », « Paquets »,
   « Collection », « Échanges », « Marché », « ••• Plus », « Comment ça marche ? », « Ouvrir » (bien reconnu par la regex
-  `open`). Animations actives dans la WebView visible. Le DOM de l'écran « Carte i / 5 » n'est toujours pas connu.
+  `open`). Animations actives dans la WebView visible.
+- Écran « Carte i / 5 » (bilan « Ouvrir ici », 2026-11-23) : badge `<div class="absolute top-2 left-2 px-2 py-0.5 rounded-md
+  text-xs font-bold z-30" style="background-color: var(--color-rarity-c); …">C</div>`, nom dans `<h3>` (ex. « Andrew Bathgate »),
+  bouton étoile « Ajouter aux favoris (verrouille la carte : ni défausse, ni vente, ni échange) ». **Aucun bouton de suite
+  au début** : « Continuer » apparaît après quelques secondes (après l'animation). Chaque carte doit être vue avant le paquet suivant.
+
+- 1.2.0 (versionCode 6) : `finishReveal` attend « Continuer » jusqu'à 15 s par carte, vérifie que « Carte i » avance,
+  et touche la carte en dernier recours. Exclusion par défaut : + favori|défausse|vendre|vente (migration de l'ancienne valeur).
+  Délai d'un passage en arrière-plan : 9 min (avant, 3 min). Un bilan partiel est envoyé après chaque paquet, et il est
+  enregistré si le délai est dépassé (`partial`). Maquette : « Continuer » après 3 s, 2 paquets en 37 s, favoris jamais cliqué.
 
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »

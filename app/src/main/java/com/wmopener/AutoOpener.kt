@@ -24,7 +24,8 @@ object AutoOpener {
     /** Une seule ouverture à la fois (arrière-plan et manuel confondus). */
     val busy = AtomicBoolean(false)
 
-    private const val TIMEOUT_MS = 3 * 60 * 1000L
+    /** WorkManager arrête un passage au bout de 10 min ; 5 cartes à faire défiler par paquet. */
+    private const val TIMEOUT_MS = 9 * 60 * 1000L
 
     fun buildScript(context: Context, prefs: Prefs, mode: String): String {
         val cfg = JSONObject()
@@ -101,8 +102,9 @@ object AutoOpener {
         val webView = WebView(context)
         configure(webView)
         val done = CompletableDeferred<JSONObject>()
+        var last: JSONObject? = null
         webView.addJavascriptInterface(
-            Bridge({ webView }, { onProgress(it.optInt("opened")) }) { done.complete(it) }, "WMBridge"
+            Bridge({ webView }, { last = it; onProgress(it.optInt("opened")) }) { done.complete(it) }, "WMBridge"
         )
 
         // WebView sans fenêtre : on lui donne une taille d'écran de téléphone pour la mise en page.
@@ -129,6 +131,7 @@ object AutoOpener {
         webView.loadUrl(prefs.pullsUrl)
 
         val result = withTimeoutOrNull(TIMEOUT_MS) { done.await() }
+            ?: last?.takeIf { it.optInt("opened") > 0 }?.put("ok", true)?.put("partial", true)
             ?: JSONObject().put("ok", false).put("reason", "timeout")
 
         CookieManager.getInstance().flush()
@@ -172,7 +175,8 @@ object AutoOpener {
         else -> {
             val n = r.optInt("opened"); val c = r.optJSONArray("cards")?.length() ?: 0
             "$n paquet${if (n > 1) "s" else ""} ouvert${if (n > 1) "s" else ""}" +
-                if (c > 0) ", $c carte${if (c > 1) "s" else ""} détectée${if (c > 1) "s" else ""}." else "."
+                (if (c > 0) ", $c carte${if (c > 1) "s" else ""} détectée${if (c > 1) "s" else ""}" else "") +
+                if (r.optBoolean("partial")) " (passage interrompu : délai dépassé)." else "."
         }
     }
 }

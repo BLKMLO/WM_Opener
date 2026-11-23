@@ -54,10 +54,15 @@
         return visible(el);
       });
 
-  const find = (re) => clickables().find((el) => {
-    const t = label(el);
-    return t && t.length < 80 && re.test(t) && !exclRe.test(t);
-  });
+  // Les boutons à texte (« Continuer ») passent avant les boutons-icônes (« [icône …] ») :
+  // sur la dernière carte, la flèche › reste présente mais ne mène nulle part.
+  const find = (re) => {
+    const ok = clickables().filter((el) => {
+      const t = label(el);
+      return t && t.length < 80 && re.test(t) && !exclRe.test(t);
+    });
+    return ok.find((el) => !label(el).startsWith("[icône")) || ok[0];
+  };
 
   // État de la page, lu dans le texte visible.
   const pageText = () => (document.body.innerText || "").replace(/\s+/g, " ");
@@ -158,7 +163,8 @@
     // Chaque nouvelle carte est transmise aussitôt : rien n'est perdu si le passage est interrompu.
     const collect = () => {
       const before = found.size;
-      cardsOnScreen().forEach((v, k) => { if (!baseline.has(k)) found.set(k, v); });
+      // Clé par paquet : une même carte tirée dans deux paquets compte deux fois.
+      cardsOnScreen().forEach((v, k) => { if (!baseline.has(k)) found.set(openedSoFar + "|" + k, v); });
       if (found.size > before) progress({ opened: openedSoFar, cards: [...found.values()] });
     };
 
@@ -257,8 +263,11 @@
         return `${t.tagName.toLowerCase()}${t.disabled ? " désactivée" : ""} ${Math.round(r.width)}x${Math.round(r.height)} opacité ${cs.opacity}`;
       });
       const enc = [...document.querySelectorAll("button,div,span")].find((e) => /^encore\s+\d+/i.test((e.innerText || e.textContent || "").trim()));
-      const bg = window.__wmBg ? `images moteur ${window.__wmBg.native}, minuterie ${window.__wmBg.timer}` : "page visible";
-      return `flèches [${arrows.join(" ; ")}], « Encore » ${enc ? "présent" : "absent"}, ${bg}, document ${document.visibilityState}`;
+      const w = window.__wmBg;
+      const bg = w ? `images demandées ${w.req}, moteur ${w.native}, minuterie ${w.timer}, animations créées ${w.anims}, terminées ${w.finished}` : "page visible";
+      let running = 0; try { running = document.getAnimations().filter((a) => a.playState === "running").length; } catch (e) {}
+      return `flèches [${arrows.join(" ; ")}], « Encore » ${enc ? "présent" : "absent"}, ${bg}, en cours ${running}, ` +
+        `badges ${document.querySelectorAll('[style*="--color-rarity-"]').length}, titres ${document.querySelectorAll("h3").length}, document ${document.visibilityState}`;
     };
 
     const finishReveal = async () => {
@@ -272,7 +281,7 @@
 
         // « Continuer » (ou autre bouton de suite) : apparaît quand toutes les cartes ont été vues.
         let f = null;
-        for (let w = 0; w < 6 && !f; w++) { f = find(followRe); if (!f) { await sleep(500); collect(); if (!reveal()) return; } }
+        for (let w = 0; w < 10 && !f; w++) { f = find(followRe); if (!f) { await sleep(500); collect(); if (!reveal()) return; } }
         const sig0 = signature();
         if (f) {
           log(`carte ${r0.i}/${r0.n} : clic « ${label(f)} »`);

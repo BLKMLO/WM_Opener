@@ -1,3 +1,12 @@
+## WM Opener 1.4.1
+
+- **Une seule carte par paquet en arrière-plan** : le site anime l'arrivée des cartes avec les animations natives du navigateur, qui restent figées dans une page cachée. Les flèches n'apparaissaient donc jamais. En arrière-plan, l'appli termine maintenant chaque animation dès qu'elle commence, et ses évènements de fin partent normalement.
+- **Dernière carte** : « Continuer » est cliqué en priorité sur la flèche ›, qui ne mène plus nulle part sur la dernière carte.
+- **Doublons** : une même carte tirée dans deux paquets d'un même passage compte deux fois.
+- Le déroulé, en cas de blocage, détaille les animations (créées, terminées, en cours) et le nombre de badges et de titres présents.
+
+---
+
 ## WM Opener 1.4.0
 
 - **Défilement des cartes en arrière-plan** : la page invisible était considérée comme cachée par le moteur du navigateur, qui figeait ses animations. La carte restait transparente et la flèche › désactivée, d'où une seule carte lue par paquet. L'appli annonce désormais une page visible et relaie les animations par une minuterie quand le moteur n'en produit plus. La vérification anti-robot n'est pas touchée.

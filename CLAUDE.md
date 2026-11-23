@@ -117,6 +117,17 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   les 5 cartes. Fréquence 10 min : chaîne de OneTimeWork `wm_auto_chain` (APPEND_OR_REPLACE en fin de passage) + garde
   périodique 1 h (`watchdog`). `Prefs.intervalMinutes` : minimum 10.
 
+- Déroulé réel 19:45 (1.4.0) : « images moteur 1, minuterie 0 » (une seule image demandée par la page), « flèches [] »,
+  « Encore » présent, une carte (Ponor (Pirot)). Conclusion : le site n'anime pas par rAF mais par **Web Animations**
+  (probablement la bibliothèque Motion), figées dans une page cachée. La promesse `finished` n'arrive jamais, donc les flèches
+  ne sont jamais rendues.
+- 1.4.1 (versionCode 11) : background.js termine (`finish()`) toute animation à durée finie (document.getAnimations,
+  toutes les 150 ms et après chaque `Element.animate`), ce qui couvre aussi les transitions et animations CSS. Compteurs :
+  req/native/timer/anims/finished. `find()` préfère les boutons à texte aux « [icône …] » (sinon la flèche › était cliquée
+  en boucle sur 5/5 au lieu de « Continuer »). Clé des cartes = n° de paquet + rareté|nom (doublons comptés). Attente de
+  « Continuer » : 5 s avant les méthodes ADVANCE. Maquette WAAPI figée : sans correctif, même déroulé qu'en réel ; avec
+  correctif, 2 paquets et 10 cartes. Les maquettes précédentes (carrousel, Continuer après 3 s, vérification) passent toujours.
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

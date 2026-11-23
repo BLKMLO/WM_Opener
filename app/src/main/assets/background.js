@@ -7,7 +7,7 @@
 // aux requêtes du site.
 (function () {
   if (window.__wmBg) return;
-  window.__wmBg = { native: 0, timer: 0 };
+  window.__wmBg = { req: 0, native: 0, timer: 0, anims: 0, finished: 0 };
   try {
     Object.defineProperty(Document.prototype, "visibilityState", { configurable: true, get: () => "visible" });
     Object.defineProperty(Document.prototype, "hidden", { configurable: true, get: () => false });
@@ -18,6 +18,7 @@
   const pending = new Map();
   let seq = 0;
   window.requestAnimationFrame = function (cb) {
+    window.__wmBg.req++;
     const id = ++seq;
     let done = false;
     const run = (t, src) => {
@@ -38,4 +39,33 @@
     const p = pending.get(id);
     if (p) { nCancel(p[0]); clearTimeout(p[1]); pending.delete(id); }
   };
+
+  // Animations natives (Web Animations, transitions et animations CSS) : elles avancent au
+  // rythme des images du moteur, donc jamais dans une page cachée, et leur fin (promesse
+  // « finished », évènements transitionend/animationend) n'arrive pas. Le site attend cette fin
+  // pour afficher la carte et ses flèches. On termine donc chaque animation finie dès qu'elle
+  // existe : les évènements de fin partent normalement.
+  const finishAll = () => {
+    let list = [];
+    try { list = document.getAnimations ? document.getAnimations() : []; } catch (e) {}
+    for (const a of list) {
+      if (a.playState === "finished") continue;
+      try {
+        const end = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().endTime : Infinity;
+        if (!isFinite(end)) continue;          // animation infinie (indicateur de chargement…)
+        a.finish();
+        window.__wmBg.finished++;
+      } catch (e) {}
+    }
+  };
+  if (Element.prototype.animate) {
+    const nAnimate = Element.prototype.animate;
+    Element.prototype.animate = function () {
+      const a = nAnimate.apply(this, arguments);
+      window.__wmBg.anims++;
+      setTimeout(finishAll, 0);
+      return a;
+    };
+  }
+  setInterval(finishAll, 150);
 })();

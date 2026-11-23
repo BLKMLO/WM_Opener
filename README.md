@@ -15,7 +15,7 @@ Application Android qui ouvre automatiquement vos paquets de cartes sur wiki-mas
 
 ## Premier lancement
 1. Onglet **Jeu** : connectez-vous. Le captcha empêche toute connexion automatique ; la session est ensuite conservée.
-2. Onglet **Auto**, rubrique *Autorisations* : activez les notifications, la batterie sans restriction et la superposition.
+2. Onglet **Auto**, rubrique *Autorisations* : activez les notifications et la batterie sans restriction.
 3. Lancez **Diagnostic** : l'appli liste les boutons de la page des paquets, en marquant `OUVRIR`, `SUITE` ou `✕` (jamais cliqué).
    Si le bouton d'ouverture n'est pas marqué `OUVRIR`, corrigez-le dans *Avancé → Détection des boutons*.
 4. Essayez **Ouvrir maintenant**, puis activez le mode automatique.

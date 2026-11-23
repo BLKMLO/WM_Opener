@@ -151,14 +151,6 @@
             </LinearLayout>
             <TextView android:id="@+id/permBatteryState" style="@style/RowValue" />
         </LinearLayout>
-        <View style="@style/Divider" />
-        <LinearLayout android:id="@+id/permOverlay" style="@style/Row">
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingTop="10dp" android:paddingBottom="10dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Superposition" android:textColor="@color/fg" android:textSize="15sp" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Laisse la page invisible jouer ses animations." android:textColor="@color/faint" android:textSize="12sp" />
-            </LinearLayout>
-            <TextView android:id="@+id/permOverlayState" style="@style/RowValue" />
-        </LinearLayout>
     </LinearLayout>
 
     <TextView style="@style/Label" android:text="Avancé" />

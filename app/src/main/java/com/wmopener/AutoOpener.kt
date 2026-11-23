@@ -4,13 +4,10 @@ import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.view.View
-import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -108,26 +105,10 @@ object AutoOpener {
             Bridge({ webView }, { onProgress(it.optInt("opened")) }) { done.complete(it) }, "WMBridge"
         )
 
-        // Sans fenêtre, Chromium peut suspendre les animations (requestAnimationFrame).
-        // Avec l'autorisation de superposition, la WebView est attachée à une fenêtre
-        // transparente et non tactile : elle est rendue normalement, sans rien bloquer.
-        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        var attached = false
-        if (Settings.canDrawOverlays(context)) {
-            try {
-                val lp = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                    PixelFormat.TRANSLUCENT
-                ).apply { alpha = 0f }
-                wm.addView(webView, lp)
-                attached = true
-            } catch (_: Exception) { }
-        }
-        if (!attached) {
+        // WebView sans fenêtre : on lui donne une taille d'écran de téléphone pour la mise en page.
+        // (La superposition, essayée en 1.0/1.1, est bloquée par Android pour les applis
+        // installées hors Play Store, et l'ouverture fonctionne sans elle.)
+        run {
             webView.measure(
                 View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(2340, View.MeasureSpec.EXACTLY)
@@ -151,18 +132,17 @@ object AutoOpener {
             ?: JSONObject().put("ok", false).put("reason", "timeout")
 
         CookieManager.getInstance().flush()
-        if (attached) try { wm.removeViewImmediate(webView) } catch (_: Exception) { }
         webView.stopLoading()
         webView.removeJavascriptInterface("WMBridge")
         webView.destroy()
-        return result.put("overlay", attached)
+        return result
     }
 
     /** Enregistre le résultat (historique, journal, état) et renvoie un résumé lisible. */
     fun record(context: Context, r: JSONObject, source: String): String {
         val prefs = Prefs(context)
         val summary = summarize(r)
-        prefs.addLog("[$source] $summary" + if (r.has("overlay")) " (superposition ${if (r.optBoolean("overlay")) "oui" else "non"})" else "")
+        prefs.addLog("[$source] $summary" + if (r.has("raf")) " (animations ${if (r.optBoolean("raf")) "actives" else "suspendues"})" else "")
         // Déroulé détaillé (le journal est affiché du plus récent au plus ancien).
         r.optJSONArray("trace")?.let { t ->
             val lines = (0 until t.length()).map { "    · " + t.optString(it) }
@@ -187,7 +167,7 @@ object AutoOpener {
         r.optString("mode") == "diagnose" -> "Diagnostic : ${r.optJSONArray("buttons")?.length() ?: 0} bouton(s) visibles."
         r.optInt("opened") == 0 && r.optInt("noEffect") > 0 ->
             "Clic sur « Ouvrir » sans effet." + if (!r.optBoolean("raf", true))
-                " Animations suspendues : autorisez la superposition." else " Voir le journal."
+                " Animations suspendues en arrière-plan." else " Voir le journal."
         r.optInt("opened") == 0 -> "Rien à ouvrir."
         else -> {
             val n = r.optInt("opened"); val c = r.optJSONArray("cards")?.length() ?: 0

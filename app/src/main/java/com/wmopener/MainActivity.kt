@@ -242,6 +242,12 @@ class MainActivity : Activity() {
         r.optJSONObject("reveal")?.let { text.append("Écran de révélation : carte ${it.optInt("i")} / ${it.optInt("n")}\n") }
         if (r.has("raf")) text.append("Animations : ${if (r.optBoolean("raf")) "actives" else "SUSPENDUES"}\n")
 
+        r.optJSONArray("badges")?.takeIf { it.length() > 0 }?.let { a ->
+            text.append("\nBadges de rareté :\n"); for (i in 0 until a.length()) text.append("  ").append(a.optString(i)).append('\n')
+        }
+        r.optJSONArray("headings")?.takeIf { it.length() > 0 }?.let { a ->
+            text.append("\nTitres :\n"); for (i in 0 until a.length()) text.append("  ").append(a.optString(i)).append('\n')
+        }
         r.optJSONArray("trace")?.takeIf { it.length() > 0 }?.let { t ->
             text.append("\nDéroulé :\n")
             for (i in 0 until t.length()) text.append("· ").append(t.optString(i)).append('\n')
@@ -357,9 +363,6 @@ class MainActivity : Activity() {
             } else startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
         }
         findViewById<View>(R.id.permBattery).setOnClickListener { requestBattery() }
-        findViewById<View>(R.id.permOverlay).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
-        }
 
         findViewById<View>(R.id.rowDetect).setOnClickListener { showDetection() }
         findViewById<View>(R.id.rowMax).setOnClickListener { showMax() }
@@ -427,7 +430,6 @@ class MainActivity : Activity() {
         val pm = getSystemService(PowerManager::class.java)
         permState(R.id.permNotifState, notifGranted())
         permState(R.id.permBatteryState, pm.isIgnoringBatteryOptimizations(packageName))
-        permState(R.id.permOverlayState, Settings.canDrawOverlays(this))
         findViewById<TextView>(R.id.maxValue).text = prefs.maxPacks.toString()
 
         refreshCounters()

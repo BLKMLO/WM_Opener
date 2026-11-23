@@ -1,3 +1,11 @@
+## WM Opener 1.1.1
+
+- **Superposition retirée** : Android la bloque pour les applis installées hors Play Store (« paramètre restreint »), et l'ouverture en arrière-plan fonctionne sans elle (vérifié : 4 paquets ouverts, compteur passé de 10 à 6). Une autorisation sensible en moins.
+- **Cartes** : sur l'écran « Carte i / 5 », tout badge de rareté visible est pris en compte, même sans indice dans son style.
+- **Déroulé** : la première fois que l'écran « Carte i / 5 » apparaît, ses boutons, badges et titres sont notés dans le bilan (« Ouvrir ici ») et dans le journal, pour ajuster la détection.
+
+---
+
 ## WM Opener 1.1.0
 
 ### Corrigé

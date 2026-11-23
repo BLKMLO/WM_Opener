@@ -80,7 +80,8 @@
       const rar = (b.textContent || "").trim();
       if (!RARITY.test(rar)) return;
       const hint = (b.getAttribute("style") || "") + " " + (b.getAttribute("class") || "");
-      if (!/rarity/i.test(hint) || !visible(b)) return;
+      // Hors écran de révélation, on exige un indice « rarity » (évite les faux positifs).
+      if ((!/rarity/i.test(hint) && !reveal()) || !visible(b)) return;
       let c = b.parentElement;
       for (let k = 0; k < 6 && c && !c.querySelector("h1,h2,h3,h4"); k++) c = c.parentElement;
       const h = c && c.querySelector("h1,h2,h3,h4");
@@ -96,6 +97,22 @@
     requestAnimationFrame(() => { done = true; res(true); });
     setTimeout(() => { if (!done) res(false); }, 1000);
   });
+
+  // Éléments « feuilles » dont le texte est une rareté : balise, classe et style abrégés.
+  const rarityCandidates = () => [...document.querySelectorAll("*")]
+    .filter((e) => !e.children.length && RARITY.test((e.textContent || "").trim()) && visible(e))
+    .slice(0, 6)
+    .map((e) => `${(e.textContent || "").trim()} <${e.tagName.toLowerCase()}> class="${(e.getAttribute("class") || "").slice(0, 70)}" style="${(e.getAttribute("style") || "").slice(0, 70)}"`);
+  const headings = () => [...document.querySelectorAll("h1,h2,h3,h4")].filter(visible)
+    .map((h) => h.tagName.toLowerCase() + " " + h.textContent.replace(/\s+/g, " ").trim().slice(0, 40)).slice(0, 6);
+  let revealLogged = false;
+  const logReveal = () => {
+    if (revealLogged || !reveal()) return;
+    revealLogged = true;
+    log("écran révélation, boutons : " + JSON.stringify(listButtons()));
+    log("écran révélation, badges : " + JSON.stringify(rarityCandidates()));
+    log("écran révélation, titres : " + JSON.stringify(headings()));
+  };
 
   const onLogin = () => /^\/(login|signup|inscription)/.test(location.pathname);
   const listButtons = () => [...new Set(clickables().map(label).filter(Boolean))].slice(0, 80);
@@ -113,7 +130,7 @@
     if (cfg.mode === "diagnose") {
       return report({
         ok: true, mode: "diagnose", url: location.href, raf,
-        available: available(), reveal: reveal(),
+        available: available(), reveal: reveal(), badges: rarityCandidates(), headings: headings(),
         buttons: listButtons(), cards: [...cardsOnScreen().values()],
       });
     }
@@ -126,6 +143,7 @@
     // Fait défiler l'écran « Carte i / n » jusqu'au bout.
     const finishReveal = async () => {
       for (let step = 0; step < 30; step++) {
+        logReveal();
         collect();
         const before = reveal();
         if (!before) return;

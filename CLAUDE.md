@@ -31,8 +31,8 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   (`follow`) jusqu'à épuisement, et relève les cartes nouvelles (différence avec celles déjà affichées). Le rapport passe par
   `WMBridge.report/progress`. Regex invalide = rien n'est cliqué ; liens hors site ignorés ; mode `diagnose` = lecture seule.
 - `AutoOpener.kt` : configuration de la WebView, `SiteClient` (domaines autorisés, le reste part dans le navigateur),
-  `Bridge` (n'accepte que si l'URL courante est sur wiki-masters.com), `runHeadless` (WebView hors écran, attachée à une
-  fenêtre de superposition transparente si autorisée), `record` (historique et journal), verrou `busy`.
+  `Bridge` (n'accepte que si l'URL courante est sur wiki-masters.com), `runHeadless` (WebView hors écran, sans fenêtre,
+  taille 1080x2340), `record` (historique et journal), verrou `busy`.
 - `OpenerWorker.kt` : WorkManager périodique (`wm_auto_open`, 15 min au minimum) et passage unique (`wm_open_once`, KEEP).
   Service de premier plan `dataSync` pendant l'ouverture (notification ID_RUN non effaçable).
 - `Notifs.kt` : canaux status (permanente tant que l'auto est actif, ID 1), run (ID 2), result (ID 3).
@@ -65,6 +65,13 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   valeur par défaut dans Prefs), `trace` du déroulé dans le rapport et le journal, test de `requestAnimationFrame` (`raf`),
   « Ouvrir ici » (ouverture visible depuis le Diagnostic), rechargement de l'onglet Jeu après un passage.
   Maquette Playwright du déroulé réel : un clic « Ouvrir » → « Carte 1/5 » … 5/5 → retour, compteur décrémenté.
+
+- 1.1.1 (versionCode 5) : superposition (SYSTEM_ALERT_WINDOW) supprimée, car bloquée par Android pour les applis
+  installées hors Play Store, et inutile (constaté : 4 paquets ouverts en arrière-plan, compteur passé de 10/10 à 6/10). Sur l'écran
+  « Carte i / n », tout badge de rareté visible est accepté. Relevé automatique de l'écran de révélation dans `trace`.
+- Diagnostic réel (2026-11-23, page d'accueil /pulls) : boutons « 0 » (monnaie W), « Notifications », « Paquets »,
+  « Collection », « Échanges », « Marché », « ••• Plus », « Comment ça marche ? », « Ouvrir » (bien reconnu par la regex
+  `open`). Animations actives dans la WebView visible. Le DOM de l'écran « Carte i / 5 » n'est toujours pas connu.
 
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »

@@ -32,12 +32,12 @@ object AutoOpener {
     /** WorkManager arrête un passage au bout de 10 min ; 5 cartes à faire défiler par paquet. */
     private const val TIMEOUT_MS = 9 * 60 * 1000L
 
-    fun buildScript(context: Context, prefs: Prefs, mode: String): String {
+    fun buildScript(context: Context, prefs: Prefs, mode: String, maxPacks: Int = prefs.maxPacks): String {
         val cfg = JSONObject()
             .put("open", prefs.openRegex)
             .put("follow", prefs.followRegex)
             .put("exclude", prefs.excludeRegex)
-            .put("maxPacks", prefs.maxPacks)
+            .put("maxPacks", maxPacks)
             .put("mode", mode)
         val js = context.assets.open("opener.js").bufferedReader().use { it.readText() }
         return js.replace("__WM_CFG__", cfg.toString())
@@ -134,10 +134,11 @@ object AutoOpener {
         val prefs = Prefs(context)
         val webView = WebView(context)
         configure(webView)
-        val done = CompletableDeferred<JSONObject>()
+        var done = CompletableDeferred<JSONObject>()
         var last: JSONObject? = null
+        var openedBefore = 0   // paquets ouverts lors d'une tentative précédente (avant rechargement)
         webView.addJavascriptInterface(
-            Bridge({ webView }, { last = it; onProgress(it.optInt("opened")) }) { done.complete(it) }, "WMBridge"
+            Bridge({ webView }, { last = it; onProgress(openedBefore + it.optInt("opened")) }) { done.complete(it) }, "WMBridge"
         )
 
         // WebView sans fenêtre : on lui donne une taille d'écran de téléphone pour la mise en page.
@@ -158,7 +159,7 @@ object AutoOpener {
         webView.onResume()
         webView.resumeTimers()
 
-        val script = buildScript(context, prefs, "open")
+        var script = buildScript(context, prefs, "open")
         var injected = false
         webView.webViewClient = object : SiteClient(context, external = false) {
             override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
@@ -174,15 +175,50 @@ object AutoOpener {
         }
         webView.loadUrl(prefs.pullsUrl)
 
-        val result = withTimeoutOrNull(TIMEOUT_MS) { done.await() }
-            ?: last?.takeIf { it.optInt("opened") > 0 }?.put("ok", true)?.put("partial", true)
-            ?: JSONObject().put("ok", false).put("reason", "timeout")
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        suspend fun await(): JSONObject =
+            withTimeoutOrNull((deadline - System.currentTimeMillis()).coerceAtLeast(1)) { done.await() }
+                ?: last?.takeIf { it.optInt("opened") > 0 }?.put("ok", true)?.put("partial", true)
+                ?: JSONObject().put("ok", false).put("reason", "timeout")
+
+        var result = await()
+        // Écran des cartes resté bloqué (carte jamais chargée…) : on recharge la page une fois et
+        // on reprend. Le site garde le paquet ouvert ; le script termine la révélation en cours.
+        if (result.optBoolean("stuckReveal") && deadline - System.currentTimeMillis() > 60_000) {
+            val first = result
+            openedBefore = first.optInt("opened")
+            last = null
+            done = CompletableDeferred()
+            script = buildScript(context, prefs, "open", (prefs.maxPacks - openedBefore).coerceAtLeast(1))
+            injected = false
+            webView.loadUrl(prefs.pullsUrl)
+            result = merge(first, await())
+        }
 
         CookieManager.getInstance().flush()
         webView.stopLoading()
         webView.removeJavascriptInterface("WMBridge")
         webView.destroy()
         return result
+    }
+
+    /** Réunit les bilans de deux tentatives (avant / après rechargement de la page). */
+    private fun merge(a: JSONObject, b: JSONObject): JSONObject {
+        fun arr(o: JSONObject, k: String) = o.optJSONArray(k) ?: org.json.JSONArray()
+        val cards = org.json.JSONArray().apply {
+            arr(a, "cards").let { for (i in 0 until it.length()) put(it.get(i)) }
+            arr(b, "cards").let { for (i in 0 until it.length()) put(it.get(i)) }
+        }
+        val trace = org.json.JSONArray().apply {
+            arr(a, "trace").let { for (i in 0 until it.length()) put(it.get(i)) }
+            put("— page rechargée, reprise —")
+            arr(b, "trace").let { for (i in 0 until it.length()) put(it.get(i)) }
+        }
+        return JSONObject(b.toString())
+            .put("ok", a.optBoolean("ok") || b.optBoolean("ok"))
+            .put("opened", a.optInt("opened") + b.optInt("opened"))
+            .put("noEffect", a.optInt("noEffect") + b.optInt("noEffect"))
+            .put("cards", cards).put("trace", trace).put("reloaded", true)
     }
 
     /** Enregistre le résultat (historique, journal, état) et renvoie un résumé lisible. */

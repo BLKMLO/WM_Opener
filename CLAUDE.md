@@ -128,6 +128,17 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   « Continuer » : 5 s avant les méthodes ADVANCE. Maquette WAAPI figée : sans correctif, même déroulé qu'en réel ; avec
   correctif, 2 paquets et 10 cartes. Les maquettes précédentes (carrousel, Continuer après 3 s, vérification) passent toujours.
 
+- 2026-11-24 : avec la 1.4.1, ça marche le plus souvent (historique de 70 paquets, 5 cartes par paquet). Échec rare
+  (07:56) : « Carte 1/5 » et « Encore » présents, mais **badges 0, titres 0** (carte absente du DOM), « en cours 1 »
+  (animation infinie, probablement un indicateur de chargement), « dispo ? » au départ. Hypothèse (non prouvée) :
+  contenu de la carte encore en chargement (réseau ou image lazy jamais chargée dans une page sans écran).
+- 1.4.2 (versionCode 12) : `finishReveal` attend jusqu'à 30 s que `[style*=--color-rarity-]` apparaisse ; en cas d'échec,
+  `stuckReveal: true` → `runHeadless` recharge /pulls une fois (si > 60 s restantes) avec `maxPacks` réduit, puis
+  `merge()` réunit les deux bilans (trace « — page rechargée, reprise — »). background.js passe `img[loading=lazy]` en
+  eager (MutationObserver). `stuckState` liste les animations en cours (nom + cible, classes spin/pulse/load) et
+  l'état des images. Maquettes : carte arrivant après 8 s → 5 cartes ; carte jamais chargée → stuckReveal avec
+  « en cours 1 [spin sur div.animate-spin] ». Le rechargement Kotlin n'est pas testable hors appareil.
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

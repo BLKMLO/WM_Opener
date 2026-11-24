@@ -68,4 +68,22 @@
     };
   }
   setInterval(finishAll, 150);
+
+  // Images « lazy » : chargées quand elles entrent dans l'écran, ce qui n'arrive jamais dans une
+  // page sans écran. On les passe en chargement immédiat.
+  const eager = (root) => {
+    try { root.querySelectorAll && root.querySelectorAll('img[loading="lazy"]').forEach((i) => { i.loading = "eager"; }); } catch (e) {}
+  };
+  const startObserver = () => {
+    eager(document);
+    new MutationObserver((muts) => {
+      for (const m of muts) for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === "IMG" && n.loading === "lazy") n.loading = "eager";
+        eager(n);
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  };
+  if (document.documentElement) startObserver();
+  else document.addEventListener("readystatechange", startObserver, { once: true });
 })();

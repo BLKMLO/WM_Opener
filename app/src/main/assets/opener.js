@@ -266,18 +266,43 @@
       const w = window.__wmBg;
       const bg = w ? `images demandées ${w.req}, moteur ${w.native}, minuterie ${w.timer}, animations créées ${w.anims}, terminées ${w.finished}` : "page visible";
       let running = 0; try { running = document.getAnimations().filter((a) => a.playState === "running").length; } catch (e) {}
-      return `flèches [${arrows.join(" ; ")}], « Encore » ${enc ? "présent" : "absent"}, ${bg}, en cours ${running}, ` +
+      // Ce qui tourne encore (indicateur de chargement ?) et état des images.
+      let what = [];
+      try {
+        what = document.getAnimations().filter((a) => a.playState === "running").slice(0, 3).map((a) => {
+          const t = a.effect && a.effect.target;
+          const cls = t ? (t.getAttribute("class") || "").split(/\s+/).filter((c) => /spin|pulse|load|animate|skeleton/.test(c)).join(".") : "";
+          return (a.animationName || a.transitionProperty || "anim") + (t ? " sur " + t.tagName.toLowerCase() + (cls ? "." + cls : "") : "");
+        });
+      } catch (e) {}
+      const imgs = [...document.images];
+      const imgState = `images ${imgs.length} (chargées ${imgs.filter((i) => i.complete && i.naturalWidth).length}, lazy ${imgs.filter((i) => i.loading === "lazy").length})`;
+      return `flèches [${arrows.join(" ; ")}], « Encore » ${enc ? "présent" : "absent"}, ${bg}, en cours ${running} [${what.join(" ; ")}], ${imgState}, ` +
         `badges ${document.querySelectorAll('[style*="--color-rarity-"]').length}, titres ${document.querySelectorAll("h3").length}, document ${document.visibilityState}`;
     };
 
+    // Carte présente dans la page (même invisible) ?
+    const cardInDom = () => document.querySelector('[style*="--color-rarity-"]') !== null;
+    let stuckReveal = false;
+
     const finishReveal = async () => {
-      let fails = 0;
+      let fails = 0, waitedLoad = false;
       for (let step = 0; step < 40; step++) {
         if (!(await passVerification())) return;
         logReveal();
         collect();
         const r0 = reveal();
         if (!r0) return;
+
+        // Écran « Carte i / n » affiché mais carte absente : elle se charge encore (réseau, image).
+        if (!cardInDom() && !waitedLoad) {
+          waitedLoad = true;
+          log(`carte ${r0.i}/${r0.n} : carte pas encore chargée, attente (max 30 s)`);
+          let t = 0;
+          for (; t < 60 && !cardInDom() && reveal(); t++) await sleep(500);
+          log(cardInDom() ? `carte chargée après ${Math.round(t / 2)} s` : "carte toujours absente après 30 s");
+          collect();
+        }
 
         // « Continuer » (ou autre bouton de suite) : apparaît quand toutes les cartes ont été vues.
         let f = null;
@@ -303,6 +328,7 @@
         if (++fails >= 3) {
           log(`carte ${r0.i}/${r0.n} : impossible d'avancer (${order.join(", ")} sans effet)`);
           log("état : " + stuckState());
+          stuckReveal = true;   // l'appli rechargera la page une fois pour reprendre
           return;
         }
         await sleep(2000);   // laisse le temps à « Continuer » d'apparaître
@@ -358,7 +384,7 @@
     }
 
     report({
-      ok: true, opened, noEffect, raf, clicks, trace, blocked,
+      ok: true, opened, noEffect, raf, clicks, trace, blocked, stuckReveal,
       cards: [...found.values()], available: available(), url: location.href, buttons: listButtons(),
     });
   } catch (e) {

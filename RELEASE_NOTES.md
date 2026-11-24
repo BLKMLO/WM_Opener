@@ -1,3 +1,12 @@
+## WM Opener 1.4.2
+
+- **Carte pas encore chargée** : quand l'écran « Carte 1 / 5 » s'affiche avant la carte elle-même (réseau lent, image en cours de chargement), l'appli attend jusqu'à 30 s qu'elle arrive au lieu d'abandonner.
+- **Rechargement de secours** : si l'écran des cartes reste bloqué malgré tout, la page est rechargée une fois et l'ouverture reprend. Le déroulé l'indique (« page rechargée, reprise »).
+- **Images** : en arrière-plan, les images à chargement différé (« lazy ») sont chargées immédiatement. Une page sans écran ne les aurait jamais chargées.
+- Le déroulé, en cas de blocage, indique aussi ce qui tourne encore (indicateur de chargement…) et l'état des images.
+
+---
+
 ## WM Opener 1.4.1
 
 - **Une seule carte par paquet en arrière-plan** : le site anime l'arrivée des cartes avec les animations natives du navigateur, qui restent figées dans une page cachée. Les flèches n'apparaissaient donc jamais. En arrière-plan, l'appli termine maintenant chaque animation dès qu'elle commence, et ses évènements de fin partent normalement.

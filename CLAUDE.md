@@ -139,6 +139,15 @@ Préférences : ne jamais inventer de chiffre, signaler les données manquantes,
   l'état des images. Maquettes : carte arrivant après 8 s → 5 cartes ; carte jamais chargée → stuckReveal avec
   « en cours 1 [spin sur div.animate-spin] ». Le rechargement Kotlin n'est pas testable hors appareil.
 
+- 2026-11-28 : l'utilisatrice trouve l'appli « quasiment parfaite » ; seul reproche : les sons en arrière-plan.
+  1.4.3 (versionCode 13) : background.js (arrière-plan uniquement) force HTMLMediaElement muted/volume 0 (accesseurs
+  redéfinis + play) et enveloppe AudioContext/webkitAudioContext pour que `destination` soit un GainNode à 0. Notification
+  de résultat en `setSilent(true)`. Vérifié en Playwright : audio muet malgré muted=false/volume=1, destination = gain 0.
+- Question iOS (2026-11-28), réponse donnée : pas d'équivalent fiable. iOS ne permet pas de tâche périodique garantie
+  (BGAppRefreshTask décidé par le système, environ 30 s), une WKWebView en arrière-plan est suspendue, l'installation hors App Store
+  passe par un compte développeur ou AltStore (re-signature tous les 7 jours), et le build exige macOS/Xcode (impossible ici).
+  Seule option réaliste : ouverture quand l'appli est au premier plan.
+
 ## À faire / pistes
 - Ajuster les regex par défaut quand l'utilisatrice enverra la sortie du Diagnostic ou d'« Ouvrir ici »
   (noms réels des icônes de l'écran « Carte i / 5 » et de son bouton de fin).

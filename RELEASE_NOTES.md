@@ -1,3 +1,10 @@
+## WM Opener 1.4.3
+
+- **Silence en arrière-plan** : la page invisible ne joue plus aucun son (tirage, cartes…). Les éléments audio sont forcés en muet et le son Web Audio passe par un volume à zéro. L'onglet Jeu garde ses sons.
+- **Notification « paquets ouverts » silencieuse** : plus de son ni de vibration.
+
+---
+
 ## WM Opener 1.4.2
 
 - **Carte pas encore chargée** : quand l'écran « Carte 1 / 5 » s'affiche avant la carte elle-même (réseau lent, image en cours de chargement), l'appli attend jusqu'à 30 s qu'elle arrive au lieu d'abandonner.

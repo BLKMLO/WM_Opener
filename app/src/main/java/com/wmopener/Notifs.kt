@@ -100,6 +100,7 @@ object Notifs {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openApp(ctx, MainActivity.TAB_HISTORY))
+            .setSilent(true)          // ni son ni vibration : l'appli travaille en silence
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(ctx).notify(ID_RESULT, n)

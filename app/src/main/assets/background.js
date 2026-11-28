@@ -86,4 +86,34 @@
   };
   if (document.documentElement) startObserver();
   else document.addEventListener("readystatechange", startObserver, { once: true });
+
+  // Silence : la page d'arrière-plan ne doit jamais émettre de son (tirage, cartes…).
+  // 1) éléments <audio>/<video> et new Audio() : toujours muets, quoi que demande le site.
+  try {
+    const P = HTMLMediaElement.prototype;
+    const mutedD = Object.getOwnPropertyDescriptor(P, "muted");
+    const volD = Object.getOwnPropertyDescriptor(P, "volume");
+    Object.defineProperty(P, "muted", { configurable: true, get() { return true; }, set() { mutedD.set.call(this, true); } });
+    Object.defineProperty(P, "volume", { configurable: true, get() { return volD.get.call(this); }, set() { volD.set.call(this, 0); } });
+    const nPlay = P.play;
+    P.play = function () { try { mutedD.set.call(this, true); volD.set.call(this, 0); } catch (e) {} return nPlay.apply(this, arguments); };
+  } catch (e) {}
+  // 2) Web Audio : tout passe par un volume à zéro avant les haut-parleurs.
+  const wrapCtx = (C) => {
+    if (!C) return C;
+    const W = function () {
+      const ctx = new C(...arguments);
+      try {
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        g.connect(ctx.destination);
+        Object.defineProperty(ctx, "destination", { configurable: true, get: () => g });
+      } catch (e) {}
+      return ctx;
+    };
+    W.prototype = C.prototype;
+    return W;
+  };
+  if (window.AudioContext) window.AudioContext = wrapCtx(window.AudioContext);
+  if (window.webkitAudioContext) window.webkitAudioContext = wrapCtx(window.webkitAudioContext);
 })();
